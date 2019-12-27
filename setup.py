@@ -15,10 +15,6 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     keywords = 'NHXDB NHXTech chmuhammadsohaib NHX Database',
     license="MIT",
-    install_requires=[
-        "ast",
-        "hashlib"
-    ],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
