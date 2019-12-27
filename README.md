@@ -90,6 +90,7 @@ database.create_table({
 })
 ```
 The ```name``` and ```type``` decleration is mandatory, the rest are as follows:
+
 | Field  | Description | Default Value
 | ------ | ------ | --------- |
 | length  | Maximum length of field | 255 for int and float, 16384 for str
@@ -97,6 +98,7 @@ The ```name``` and ```type``` decleration is mandatory, the rest are as follows:
 | ai | Auto Increment an int field by 1 | False  
 | default | The default value for a field | None (even if it is used and parallely ```ai``` is used, it defaults to None)
 | attribute | The default attribute (primary, unique or index) | None
+
  Primary vs Unique vs Index will be differentiated later here.
 #### .alter_table(properties)
 This is used to make any kind of modifications in the structure of Table. ```Properties``` is a dictionary with keys, ```table_name```, the name of the table, ```operation```, one of operation from: "add" or "drop" field(s), and ```fields```, a __list__. For __"add"__ operation, the list contains dictionaries of fields to be added, whereas in __"drop"__ operation, the list only contains the field names to drop. Returns a status code.
