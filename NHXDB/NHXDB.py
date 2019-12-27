@@ -6,7 +6,7 @@ class db:
 	def __init__(self):
 		self.logged_in = False
 		self.logged_DB = None
-		if sys.platform.lower().startswith("linux") or sys.platform().lower().startswith("darwin"):
+		if sys.platform.lower().startswith("linux") or sys.platform.lower().startswith("darwin"):
 			os.chdir("/usr/local/")
 			if os.path.exists("NHX"):
 				os.chdir("NHX")
