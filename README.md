@@ -1,6 +1,6 @@
 # NHXDB
 
-NHXDB is a lightweight Database which combines the SQL-like language with the ease of NoSQL-like syntax
+NHXDB is a lightweight Database which combines the SQL-like language with the ease of ORM syntax
 
 
 # Features currently supported
