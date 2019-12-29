@@ -5,10 +5,10 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="NHXDB",
-    version="1.0b3",
+    version="1.0",
     author="Ch. Muhammad Sohaib",
     author_email="chmuhammadsohaib@gmail.com",
-    description="A lightweight Database Module with a blend of SQL like Language and NoSQL syntax",
+    description="A lightweight Database Module with a blend of SQL like Language and ORM syntax",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/chmuhammadsohaib/NHXDB",
@@ -16,7 +16,7 @@ setuptools.setup(
     keywords = 'NHXDB NHXTech chmuhammadsohaib NHX Database',
     license="MIT",
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
         "Programming Language :: Python :: 3",

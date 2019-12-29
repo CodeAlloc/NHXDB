@@ -28,24 +28,23 @@ class db:
 		return code
 
 
-	def validator(self, db_properties, no_cred=False, others=[]):
+	def validator(self, db_properties, no_cred=False):
 		self.db_properties = db_properties
 		if type(db_properties) != dict:
 			# Returns status code 300 = Invalid Entry
 			return self.returner(300)
-		if others != []:
-			incomplete = False
-			for item in others:
-				if item not in db_properties:
-					incomplete = True
-			if incomplete:
-				return self.returner(302)
 		if "name" in db_properties and "username" in db_properties and "password" in db_properties and no_cred == False:
-			self.database_name = self.db_properties["name"].lower()
-			self.database_usr = self.db_properties["username"]
-			self.database_pass = self.db_properties["password"]
+			if type(db_properties["name"]) == str and type(db_properties["username"]) == str and type(db_properties["password"]) == str:
+				self.database_name = self.db_properties["name"].lower()
+				self.database_usr = self.db_properties["username"]
+				self.database_pass = self.db_properties["password"]
+			else:
+				return self.returner(300)
 		elif no_cred == True and "name" in db_properties:
-			self.database_name = self.db_properties["name"]
+			if type(db_properties["name"]) == str:
+				self.database_name = self.db_properties["name"]
+			else:
+				return self.returner(300)
 		else:
 			# Returns status code 302 = Incomplete
 			return self.returner(302)
@@ -58,6 +57,10 @@ class db:
 		for field in table_fields:
 			if type(field) == str:
 				field = literal_eval(field)
+			if "name" not in field or "type" not in field:
+				return self.returner(302)
+			if ("name" in field and type(field["name"]) != str) or ("type" in field and type(field["type"]) != str) or ("length" in field and type(field["length"]) != int) or ("ai" in field and type(field["ai"]) != bool) or ("null" in field and type(field["null"]) != bool) or ("default" in field and type(field["default"]) != str) or ("attribute" in field and type(field["attribute"]) != str):
+				return self.returner(300)
 			if "name" not in field or "type" not in field: 
 				return self.returner(302)
 			if "ai" in field and field["ai"] == True and field["type"].lower() != "int":
@@ -111,8 +114,8 @@ class db:
 				encoded = hashlib.sha256(self.database_usr.encode("utf-8") + self.database_pass.encode("utf-8")).hexdigest()
 				pass_encoded = hashlib.sha256(self.database_pass.encode("utf-8")).hexdigest()
 				handler.write(self.database_name + "|" + str(encoded) + "|" + str(pass_encoded))
-				# Returns status code 200 = Success
-				return self.returner(200)
+		# Returns status code 200 = Success
+		return self.returner(200)
 
 
 	def login(self, db_properties):
@@ -136,11 +139,9 @@ class db:
 			if verification == verified and post_verification == post_verified:
 				self.logged_in = True
 				self.logged_DB = self.database_name
-				self.status_code = 200
 				return self.returner(200)
 			else:
 				# Returns status code 303 = Credentials error
-				self.status_code = 303
 				return self.returner(303)
 
 
@@ -149,12 +150,15 @@ class db:
 			return self.returner(304)
 		os.chdir("./NHX_DB_Dat/")
 		shutil.rmtree(self.database_name)
+		self.logged_in = False
 		return self.returner(200)
 
 
 	def backup(self, path):
 		if self.logged_in != True:
 			return self.returner(304)
+		if type(path) != str:
+			return self.returner(300)
 		shutil.make_archive("./NHX_DB_Dat/cache" + self.database_name, "zip", "./NHX_DB_Dat/"+ self.database_name)
 		file = open("./NHX_DB_Dat/cache" + self.database_name + ".zip", "r+b")
 		data = file.read()
@@ -168,7 +172,7 @@ class db:
 
 
 	def restore(self, db_properties):
-		status_code = self.validator(db_properties, others=["file"])
+		status_code = self.validator(db_properties)
 		if status_code != 200:
 			return self.returner(status_code)
 		dir_exists = os.path.exists("./NHX_DB_Dat/")
@@ -177,6 +181,10 @@ class db:
 		else:
 			os.mkdir("./NHX_DB_Dat")
 			os.chdir("./NHX_DB_Dat")
+		if "file" not in db_properties:
+			return self.returner(302)
+		if type(db_properties["file"]) != str:
+			return self.returner(300)
 		if os.path.isfile(db_properties["file"]) != True:
 			return self.returner(404)
 		file = open(db_properties["file"], "r+b")
@@ -211,7 +219,9 @@ class db:
 	def create_table(self, structure, override=False):
 		if self.logged_in != True:
 			return self.returner(304)
-		if type(structure) != dict and type(structure["fields"]) != list:
+		if "fields" not in structure or "name" not in structure:
+			return self.returner(302)
+		if type(structure) != dict or type(structure["fields"]) != list or type(structure["name"]) != str:
 			return self.returner(300)
 		no_field = len(structure["fields"])
 		table_name = structure["name"].lower()
@@ -283,6 +293,8 @@ class db:
 	def drop_table(self, table_name):
 		if self.logged_in != True:
 			return self.returner(304)
+		if type(table_name) != str:
+			return self.returner(300)
 		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/")
 		if os.path.exists(table_name) != True:
 			return self.returner(404)
@@ -293,10 +305,12 @@ class db:
 	def truncate_table(self, table_name):
 		if self.logged_in != True:
 			return self.returner(304)
+		if type(table_name) != str:
+			return self.returner(300)
 		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/")
-		if os.path.exists(table_name) != True:
+		if os.path.exists(table_name.lower()) != True:
 			return self.returner(404)
-		os.chdir(table_name)
+		os.chdir(table_name.lower())
 		head = []
 		with open("nindex.NHX", "w") as file:
 			pass
@@ -309,9 +323,13 @@ class db:
 		if self.logged_in != True:
 			return self.returner(304)
 		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/")
-		if os.path.exists(values["table_name"]) != True:
+		if "fields" not in values or "table_name" not in values or "operation" not in values:
+			return self.returner(302)
+		if type(values) != dict or type(values["table_name"]) != str or type(values["operation"]) != str or type(values["fields"]) != list:
+			return self.returner(300)
+		if os.path.exists(values["table_name"].lower()) != True:
 			return self.returner(404)
-		os.chdir(values["table_name"])
+		os.chdir(values["table_name"].lower())
 		if values["operation"].lower() == "add":
 			cfields = []
 			with open("config.NHX", "r+") as file:
@@ -320,11 +338,18 @@ class db:
 					if index == 0:
 						cfields = row
 						break
+			for field in values["fields"]:
+				if type(field) != dict:
+					return self.returner(300)
+				if "name" not in field or "type" not in field:
+					return self.returner(302)
+				if ("name" in field and type(field["name"]) != str) or ("type" in field and type(field["type"]) != str) or ("length" in field and type(field["length"]) != int) or ("ai" in field and type(field["ai"]) != bool) or ("null" in field and type(field["null"]) != bool) or ("default" in field and type(field["default"]) != str) or ("attribute" in field and type(field["attribute"]) != str):
+					return self.returner(300)
 			table_fields = cfields + values["fields"]
 			status_code = self.valitable(table_fields)
 			if status_code != 200:
 				return self.returner(status_code)
-			os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + values["table_name"])
+			os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + values["table_name"].lower())
 			to_write = []
 			for field in table_fields:
 				if type(field) == str:
@@ -364,6 +389,9 @@ class db:
 			to_drop = values["fields"]
 			fields = []
 			to_update = []
+			for field in values["fields"]:
+				if type(field) != str:
+					return self.returner(300)
 			with open("config.NHX", "r+", newline="") as file:
 				reader = csv.reader(file, delimiter="|")
 				for index, row in enumerate(reader):
@@ -371,25 +399,35 @@ class db:
 						fields = row
 			for field in fields:
 				field = literal_eval(field)
-				if field["name"] in to_drop:
+				flagged = True
+				if field["name"].lower() in to_drop:
+					flagged = False
 					pass
 				else:
 					to_update.append(field)
+			if flagged:
+				# Returns status Code 509 = Cannot drop a field already not in Table
+				return self.returner(509)
 			with open("config.NHX", "w+", newline='') as file:
 				writer = csv.writer(file, delimiter='|')
 				writer.writerow(to_update)
+		else:
+			# Returns status code 510 = Unsupported Operation
+			return self.returner(510)
 		return self.returner(200)
 
 
 	def insert_data(self, table_name, values):
 		if self.logged_in != True:
 			return self.returner(304)
+		if type(table_name) != str or type(values) != dict:
+			return self.returner(300)
 		field_names_nindex = []
 		field_names_index = []
 		fields = []
-		if os.path.exists("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name) == False:
+		if os.path.exists("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
 			return self.returner(404)
-		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name)
+		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower())
 		with open("config.NHX", "r+", newline='') as file:
 			reader = csv.reader(file, delimiter="|")
 			for index, row in enumerate(reader):
@@ -401,15 +439,15 @@ class db:
 		for field in fields:
 			field = literal_eval(field)
 			if field["attribute"] != None:
-				indexread.append(field["name"])
+				indexread.append(field["name"].lower())
 			else:
-				nindexread.append(field["name"])
+				nindexread.append(field["name"].lower())
 		indexvalues = {}
 		nindexvalues = {}
 		for field in fields:
 			field = literal_eval(field)
 			if field["ai"] != True:
-				if (field["name"] not in values and field["null"] != True) or (values[field["name"]] == "" or values[field["name"]] == None):
+				if (field["name"].lower() not in values and field["null"] != True) or (values[field["name"].lower()] == "" or values[field["name"].lower()] == None):
 					# Returns status code 600 = Values for a non Null field is not specified
 					return self.returner(600)
 				if (field["type"].lower() == "int" and type(values[field["name"]]) != int) or (field["type"] == "float" and type(values[field["name"]]) != float) or (field["type"] == "str" and type(values[field["name"]]) != str) or ((field["type"] == "bool" and type(values[field["name"]]) != bool)):
@@ -420,22 +458,22 @@ class db:
 					return self.returner(602)
 			else:
 				pass
-			if field["name"] in values:
+			if field["name"].lower() in values:
 				if field["attribute"] != None:
-					indexvalues.update({field["name"]: values[field["name"]]})
+					indexvalues.update({field["name"].lower(): values[field["name"]]})
 					if field["attribute"].lower() == "unique" or field["attribute"].lower() == "primary":
 						file = open("index.NHX", "r+", newline='')
 						reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
 						flagged = False
 						for row in reader:
-							if str(values[field["name"]]) == str(row[field["name"]]):
+							if str(values[field["name"].lower()]) == str(row[field["name"]]):
 								flagged = True
 								break
 						if flagged:
 							# Returns status code 603 = Unique and Primary values can not have previous values
 							return self.returner(603)
 				else:
-					nindexvalues.update({field["name"]: values[field["name"]]})
+					nindexvalues.update({field["name"].lower(): values[field["name"]]})
 			else:
 				if field["attribute"] != None and field["ai"] != True:
 					indexvalues.update({field["name"]: ""})
@@ -446,21 +484,21 @@ class db:
 						with open("index.NHX", "r+") as file:
 							data = file.read().splitlines()[-1]
 						data = data.split("|")
-						index_no = indexread.index(field["name"])
+						index_no = indexread.index(field["name"].lower())
 						required = int(data[index_no]) + 1
-						indexvalues.update({field["name"]: required})
+						indexvalues.update({field["name"].lower(): required})
 					else:
-						indexvalues.update({field["name"]: 0})
+						indexvalues.update({field["name"].lower(): 0})
 				if field["attribute"] == None and field["ai"] == True:
 					if os.path.getsize("nindex.NHX") != 0:
 						with open("nindex.NHX", "r+") as file:
 							data = file.read().splitlines()[-1]
 						data = data.split("|")
-						index_no = nindexread.index(field["name"])
+						index_no = nindexread.index(field["name"].lower())
 						required = int(data[index_no]) + 1
-						nindexvalues.update({field["name"]: required})
+						nindexvalues.update({field["name"].lower(): required})
 					else:
-						nindexvalues.update({field["name"]: 0})
+						nindexvalues.update({field["name"].lower(): 0})
 				if field["attribute"] == "primary" or field["attribute"] == "index":
 					# Returns status code 604 = Primary and Index fields cannot contain be empty
 					return self.returner(604)
@@ -478,9 +516,11 @@ class db:
 	def update_data(self, table_name, values):
 		if self.logged_in != True:
 			return self.returner(304)
-		if os.path.exists("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name) == False:
+		if type(table_name) != str or type(values) != dict:
+			return self.returner(300)
+		if os.path.exists("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
 			return self.returner(404)
-		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name)
+		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower())
 		fields = []
 		with open("config.NHX", "r+", newline='') as file:
 			reader = csv.reader(file, delimiter="|")
@@ -492,17 +532,19 @@ class db:
 		indexread = []
 		to_alter = []
 		for field_name in values["fields"]:
-			to_alter.append(field_name)
+			to_alter.append(field_name.lower())
 		for field in fields:
 			field = literal_eval(field)
 			if field["attribute"] != None:
-				indexread.append(field["name"])
+				indexread.append(field["name"].lower())
 			else:
-				nindexread.append(field["name"])
+				nindexread.append(field["name"].lower())
+		flagged = True
 		for field in fields:
 			field = literal_eval(field)
 			if field["name"] in to_alter:
 				if "criteria" not in values or values["criteria"] == "*":
+					flagged = False
 					to_up = []
 					if field["attribute"] != None:
 						with open("index.NHX", "r+", newline='') as file:
@@ -524,7 +566,8 @@ class db:
 							writer = csv.DictWriter(file, fieldnames=nindexread, delimiter="|")
 							for index, row in enumerate(to_up):
 								writer.writerow(row)
-		if "criteria" in values and values["criteria"] != "*":
+		if "criteria" in values and type(values["criteria"]) == str and values["criteria"] != "*":
+			flagged = False
 			splitted = []
 			typ = 0
 			operand = 1
@@ -717,15 +760,19 @@ class db:
 						writer = csv.DictWriter(file, delimiter="|", fieldnames=nindexread)
 						for line in nindexlines:
 							writer.writerow(line)
+		else:
+			return self.returner(300)
 		return self.returner(200)
 
 
 	def delete_data(self, table_name, criteria):
 		if self.logged_in != True:
 			return self.returner(304)
-		if os.path.exists("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name) == False:
+		if type(table_name) != str or type(criteria) != str:
+			return self.returner(300)
+		if os.path.exists("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
 			return self.returner(404)
-		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name)
+		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower())
 		fields = []
 		nindexread = []
 		indexread = []
@@ -776,15 +823,15 @@ class db:
 		results = False
 		for fieldaa in fields:
 			fieldaa = literal_eval(fieldaa)
-			if fieldaa["name"] == operands[left]:
+			if fieldaa["name"] == operands[left].lower():
 				results = True
 				if (fieldaa["type"] == "str" or fieldaa["type"] == "bool") and operands[typ] == "if":
 					return self.returner(606)
 				else:
 					if fieldaa["attribute"] != None:
-						crit.update({"name": operands[left], "value": operands[right], "type": operands[operand], "is_index": True})
+						crit.update({"name": operands[left].lower(), "value": operands[right], "type": operands[operand], "is_index": True})
 					else:
-						crit.update({"name": operands[left], "value": operands[right], "type": operands[operand], "is_index": False})
+						crit.update({"name": operands[left].lower(), "value": operands[right], "type": operands[operand], "is_index": False})
 		if results != True:
 			return self.returner(608)
 		line_no = []
@@ -920,9 +967,11 @@ class db:
 	def select_data(self, table_name, criteria):
 		if self.logged_in != True:
 			return self.returner(304)
-		if os.path.exists("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name) == False:
+		if type(table_name) != str or type(criteria) != str:
+			return self.returner(300)
+		if os.path.exists("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
 			return self.returner(404)
-		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name)
+		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower())
 		fields = []
 		nindexread = []
 		indexread = []
@@ -935,9 +984,9 @@ class db:
 		for field in fields:
 			field = literal_eval(field)
 			if field["attribute"] != None:
-				indexread.append(field["name"])
+				indexread.append(field["name"].lower())
 			else:
-				nindexread.append(field["name"])
+				nindexread.append(field["name"].lower())
 		splitted = []
 		typ = 0
 		operand = 1
@@ -973,15 +1022,15 @@ class db:
 		results = False
 		for fieldaa in fields:
 			fieldaa = literal_eval(fieldaa)
-			if fieldaa["name"] == operands[left]:
+			if fieldaa["name"] == operands[left].lower():
 				results = True
 				if (fieldaa["type"] == "str" or fieldaa["type"] == "bool") and operands[typ] == "if":
 					return self.returner(606)
 				else:
 					if fieldaa["attribute"] != None:
-						crit.update({"name": operands[left], "value": operands[right], "type": operands[operand], "is_index": True})
+						crit.update({"name": operands[left].lower(), "value": operands[right], "type": operands[operand], "is_index": True})
 					else:
-						crit.update({"name": operands[left], "value": operands[right], "type": operands[operand], "is_index": False})
+						crit.update({"name": operands[left].lower(), "value": operands[right], "type": operands[operand], "is_index": False})
 		if results != True:
 			return self.returner(608)
 		line_no = []

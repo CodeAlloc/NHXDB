@@ -90,7 +90,6 @@ database.create_table({
 })
 ```
 The ```name``` and ```type``` decleration is mandatory, the rest are as follows:
-
 | Field  | Description | Default Value
 | ------ | ------ | --------- |
 | length  | Maximum length of field | 255 for int and float, 16384 for str
@@ -98,7 +97,6 @@ The ```name``` and ```type``` decleration is mandatory, the rest are as follows:
 | ai | Auto Increment an int field by 1 | False  
 | default | The default value for a field | None (even if it is used and parallely ```ai``` is used, it defaults to None)
 | attribute | The default attribute (primary, unique or index) | None
-
  Primary vs Unique vs Index will be differentiated later here.
 #### .alter_table(properties)
 This is used to make any kind of modifications in the structure of Table. ```Properties``` is a dictionary with keys, ```table_name```, the name of the table, ```operation```, one of operation from: "add" or "drop" field(s), and ```fields```, a __list__. For __"add"__ operation, the list contains dictionaries of fields to be added, whereas in __"drop"__ operation, the list only contains the field names to drop. Returns a status code.
@@ -196,6 +194,7 @@ Since this Database is designed to be as developer friendly as possible, we beli
 | 507 | Cannot have length more than 255 for int and more than 16384 for str
 | 508 | Cannot have bool type in an attributed field
 | 509 | Cannot drop a field already not in table
+| 510 | Unsupported Operation
 | 600 | Values for a non Null field is not specified
 | 601 | Values provided do not match their types
 | 602 | Values provided are longer than the size allocated
@@ -206,9 +205,10 @@ Since this Database is designed to be as developer friendly as possible, we beli
 | 607 | Cannot have the right operand as non int on int comparisons
 | 608 | Expected Left operand as A field Name, none found
 | 609 | Cannot find essential Operands
+| 610 | No criteria given
 | 700 | Unknown Internal Error
 
-> Key: 200 is Success, 3xx is Database related error, 404 is not found error for any, 5xx is Table related Error, 6xx is data related error, and 700 is Internal error, if any.
+> Key: 200 is Success, 3xx is Database related error, 404 is not found error for any, 5xx is Table related Error, 6xx is data related error, and 700 is Internal error. (Approximately)
 
 License
 ----
