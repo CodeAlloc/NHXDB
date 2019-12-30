@@ -1,5 +1,6 @@
-# NHXDB
+[![Build Status](https://travis-ci.com/chmuhammadsohaib/NHXDB.svg?branch=master)](https://travis-ci.com/chmuhammadsohaib/NHXDB)
 
+# NHXDB
 NHXDB is a lightweight Database which combines the SQL-like language with the ease of ORM syntax
 
 
