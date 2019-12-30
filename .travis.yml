@@ -1,17 +1,17 @@
 language: python
-os:
-    - "linux"
-    - "windows"
-    - "osx"
+os: 
+- "linux"
+- "osx"
+- "windows"
 python:
-    - "3.4"
-    - "3.5"
-    - "3.6"
-    - "3.7"
-    - "3.8"
-    - "3.6-dev"
-    - "3.7-dev"
-    - "3.8-dev""
-    - "nightly"
+- "3.4"
+- "3.5"
+- "3.6"
+- "3.7"
+- "3.8"
+- "3.6-dev"
+- "3.7-dev"
+- "3.8-dev"
+- "nightly"
 script:
-    - python NHXDB/NHXDB.py
+- python NHXDB/NHXDB.py
