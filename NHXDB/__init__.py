@@ -1,1 +1,1 @@
-from NHXTest.NHXTest import db
+from NHXDB.NHXDB import db
