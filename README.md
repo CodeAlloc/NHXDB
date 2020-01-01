@@ -179,6 +179,8 @@ Since this Database is designed to be as developer friendly as possible, we beli
 
 | Status Code | Meaning |
 | --------| ---------|
+| 100 | Database System not Initialized Yet
+| 101 | Permissions Error
 | 200 | Success
 | 300 | Invalid Entry
 | 301 | Already Exists

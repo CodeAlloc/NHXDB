@@ -4,23 +4,40 @@ from ast import literal_eval
 class db:
 
 	def __init__(self):
-		self.logged_in = False
-		self.logged_DB = None
-		if sys.platform.lower().startswith("linux") or sys.platform.lower().startswith("darwin"):
-			os.chdir("/usr/local/")
-			if os.path.exists("NHX"):
-				os.chdir("NHX")
-			else:
-				os.mkdir("NHX")
-				os.chdir("NHX")
-		elif sys.platform.lower().startswith("win32"): 
-			os.chdir("C:\\ProgramData")
-			if os.path.exists("NHX"):
-				os.chdir("NHX")
-			else:
-				os.mkdir("NHX")
-				os.chdir("NHX")
-		self.cwd = os.getcwd()
+		try:
+			self.logged_in = False
+			self.logged_DB = None
+			if sys.platform.lower().startswith("linux") or sys.platform.lower().startswith("darwin"):
+				os.chdir("/usr/local/")
+				if os.path.exists("NHX"):
+					os.chdir("NHX")
+				else:
+					os.mkdir("NHX")
+					os.chdir("NHX")
+				os.mkdir("cache")
+				shutil.rmtree("cache")
+			elif sys.platform.lower().startswith("win32"): 
+				os.chdir("C:\\ProgramData")
+				if os.path.exists("NHX"):
+					os.chdir("NHX")
+				else:
+					os.mkdir("NHX")
+					os.chdir("NHX")
+				os.mkdir("cache")
+				shutil.rmtree("cache")
+			self.cwd = os.getcwd()
+			self.initialized = True
+			self.permissions = True
+		except PermissionError:
+			self.permissions = False
+			self.initialized = False
+
+
+	def isPermitted(self):
+		if self.permissions == True:
+			return 200
+		else:
+			return 101
 
 
 	def returner(self, code):
@@ -59,7 +76,7 @@ class db:
 				field = literal_eval(field)
 			if "name" not in field or "type" not in field:
 				return self.returner(302)
-			if ("name" in field and type(field["name"]) != str) or ("type" in field and type(field["type"]) != str) or ("length" in field and type(field["length"]) != int) or ("ai" in field and type(field["ai"]) != bool) or ("null" in field and type(field["null"]) != bool) or ("default" in field and type(field["default"]) != str) or ("attribute" in field and type(field["attribute"]) != str):
+			if ("name" in field and type(field["name"]) != str) or ("type" in field and type(field["type"]) != str) or ("length" in field and type(field["length"]) != int) or ("ai" in field and type(field["ai"]) != bool) or ("null" in field and type(field["null"]) != bool) or ("default" in field and (type(field["default"]) != str) and (field["default"] != None)) or ("attribute" in field and ((type(field["attribute"]) != str) and (field["attribute"] != None))):
 				return self.returner(300)
 			if "name" not in field or "type" not in field: 
 				return self.returner(302)
@@ -95,6 +112,9 @@ class db:
 
 
 	def create(self, db_properties):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
 		status_code = self.validator(db_properties)
 		dir_exists = os.path.exists("./NHX_DB_Dat/")
 		if dir_exists:
@@ -119,6 +139,9 @@ class db:
 
 
 	def login(self, db_properties):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
 		self.status_code = self.validator(db_properties)
 		if self.status_code != 200:
 			return self.returner(self.status_code)
@@ -146,6 +169,9 @@ class db:
 
 
 	def drop(self):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
 		if self.logged_in != True:
 			return self.returner(304)
 		os.chdir("./NHX_DB_Dat/")
@@ -155,6 +181,9 @@ class db:
 
 
 	def backup(self, path):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
 		if self.logged_in != True:
 			return self.returner(304)
 		if type(path) != str:
@@ -172,6 +201,9 @@ class db:
 
 
 	def restore(self, db_properties):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
 		status_code = self.validator(db_properties)
 		if status_code != 200:
 			return self.returner(status_code)
@@ -217,6 +249,9 @@ class db:
 
 
 	def create_table(self, structure, override=False):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
 		if self.logged_in != True:
 			return self.returner(304)
 		if "fields" not in structure or "name" not in structure:
@@ -294,6 +329,9 @@ class db:
 
 
 	def drop_table(self, table_name):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
 		if self.logged_in != True:
 			return self.returner(304)
 		if type(table_name) != str:
@@ -306,6 +344,9 @@ class db:
 
 
 	def truncate_table(self, table_name):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
 		if self.logged_in != True:
 			return self.returner(304)
 		if type(table_name) != str:
@@ -323,6 +364,9 @@ class db:
 	
 
 	def alter_table(self, values):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
 		if self.logged_in != True:
 			return self.returner(304)
 		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/")
@@ -391,7 +435,24 @@ class db:
 			with open("config.NHX", "w+", newline='') as file:
 				writer = csv.writer(file, delimiter="|")
 				writer.writerow(to_write)
-		if values["operation"].lower() == "drop":
+			to_update = {}
+			for field in values["fields"]:
+				data = None
+				if field["type"] == "int":
+					data = 0
+				elif field["type"] == "float":
+					data = 0.00
+				elif field["type"] == "str":
+					data = ""
+				elif field["type"] == "bool":
+					data = False
+				to_update.update({field["name"]: data})
+			status = self.update_data(values["table_name"], {
+				"fields": [to_update],
+				"criteria": "*"	})
+			if status_code != 200:
+				return self.returner(700)
+		elif values["operation"].lower() == "drop":
 			to_drop = values["fields"]
 			fields = []
 			to_update = []
@@ -424,6 +485,9 @@ class db:
 
 
 	def insert_data(self, table_name, values):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
 		if self.logged_in != True:
 			return self.returner(304)
 		if type(table_name) != str or type(values) != dict:
@@ -453,7 +517,7 @@ class db:
 		for field in fields:
 			field = literal_eval(field)
 			if field["ai"] != True:
-				if (field["name"].lower() not in values and field["null"] != True) or (values[field["name"].lower()] == "" or values[field["name"].lower()] == None):
+				if ((field["name"].lower() not in values and field["null"] != True) or (values[field["name"].lower()] == "")) and (field["ai"] == False and field["default"] == None):
 					# Returns status code 600 = Values for a non Null field is not specified
 					return self.returner(600)
 				if (field["type"].lower() == "int" and type(values[field["name"]]) != int) or (field["type"] == "float" and type(values[field["name"]]) != float) or (field["type"] == "str" and type(values[field["name"]]) != str) or ((field["type"] == "bool" and type(values[field["name"]]) != bool)):
@@ -481,6 +545,10 @@ class db:
 				else:
 					nindexvalues.update({field["name"].lower(): values[field["name"]]})
 			else:
+				if field["default"] != None and field["attribute"] != None:
+					indexvalues.update({field["name"]: field["default"]})
+				elif field["default"] != None and field["attribute"] == None:
+					nindexvalues.update({field["name"]: field["default"]})
 				if field["attribute"] != None and field["ai"] != True:
 					indexvalues.update({field["name"]: ""})
 				if field["attribute"] == None and field["ai"] != True:
@@ -520,6 +588,9 @@ class db:
 
 
 	def update_data(self, table_name, values):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
 		if self.logged_in != True:
 			return self.returner(304)
 		if type(table_name) != str or type(values) != dict:
@@ -549,6 +620,8 @@ class db:
 		for field in fields:
 			field = literal_eval(field)
 			if field["name"] in to_alter:
+				if field["attribute"].lower() == "primary" or field["attribute"].lower() == "unique":
+					return self.returner(603)
 				if "criteria" not in values or values["criteria"] == "*":
 					flagged = False
 					to_up = []
@@ -737,12 +810,23 @@ class db:
 					if field == fieldx["name"]:
 						if (fieldx["attribute"]!= None and(fieldx["attribute"] == "primary" or fieldx["attribute"] == "index")) and (values["fields"][field] == "" or values["fields"][field] == None):
 							return self.returner(604)
-						if (fieldx["null"] == False) and (values["fields"][field] == "" or values["fields"][field] == None):
+						if (fieldx["null"] == False) and (values["fields"][field] == "" or values["fields"][field] == None) and (fieldx["ai"] == False and fieldx["default"] == None):
 							return self.returner(600)
 						if len(str(values["fields"][field])) > fieldx["length"]:
 							return self.returner(602)
 						if (fieldx["type"].lower() == "int" and type(values["fields"][field]) != int) or (fieldx["type"] == "float" and type(values["fields"][field]) != float) or (fieldx["type"] == "str" and type(values["fields"][field]) != str) or ((fieldx["type"] == "bool" and type(values["fields"][field]) != bool)):
 							return self.returner(601)
+						flag = False
+						if fieldx["attribute"].lower() == "unique" or fieldx["attribute"].lower() == "primary":
+							file = open("index.NHX", "r+", newline='')
+							reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
+							flagged = False
+							for row in reader:
+								if str(values[fieldx["name"].lower()]) == str(row[fieldx["name"]]):
+									flag = True
+									break
+							if flag:
+								return self.returner(603)
 						break
 				if field in indexread:
 					with open("index.NHX", "r+", newline="") as file:
@@ -766,12 +850,17 @@ class db:
 						writer = csv.DictWriter(file, delimiter="|", fieldnames=nindexread)
 						for line in nindexlines:
 							writer.writerow(line)
+		elif "criteria" not in values or values["criteria"] == "*":
+			pass
 		else:
 			return self.returner(300)
 		return self.returner(200)
 
 
 	def delete_data(self, table_name, criteria):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
 		if self.logged_in != True:
 			return self.returner(304)
 		if type(table_name) != str or type(criteria) != str:
@@ -971,6 +1060,9 @@ class db:
 
 
 	def select_data(self, table_name, criteria):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
 		if self.logged_in != True:
 			return self.returner(304)
 		if type(table_name) != str or type(criteria) != str:
@@ -1168,5 +1260,6 @@ if __name__ == "__main__":
 	print("                                     By NHXTech")
 	print("                           Written by Ch. Muhammad Sohaib")
 	print("        Since this is a module, it is designed to be used from another Python Script")
-	print("             For more details visit our Github page and get started with NHXDB       ")
+	print(" Make Sure to run this module as Administrator or root otherwise it won't function correctly")
+	print("               Github Page: https://www.github.com/chmuhammadsohaib/NHXDB       ")
 	print("                     +++++++++++++++++++++++++++++++++++++++++++\n\n")
