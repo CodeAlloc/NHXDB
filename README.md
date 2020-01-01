@@ -197,6 +197,7 @@ Since this Database is designed to be as developer friendly as possible, we beli
 | 508 | Cannot have bool type in an attributed field
 | 509 | Cannot drop a field already not in table
 | 510 | Unsupported Operation
+| 511 | Invalid Default values for Field
 | 600 | Values for a non Null field is not specified
 | 601 | Values provided do not match their types
 | 602 | Values provided are longer than the size allocated

@@ -261,7 +261,10 @@ class db:
 				buff.update({"null": True})
 			else:
 				buff.update({"null": False})
-			if "default" in field and ("ai" not in field or field["ai"] != True) and (type(field["default"]) != bool):
+			if "default" in field and (((type(field["default"]) == int and field["type"] != "int") or (type(field["default"]) == str and field["type"] != "str") or (type(field["default"]) == bool and field["type"] != "bool") or (type(field["default"]) == float and field["type"] != "float")) or (len(str(field["default"])) > buff["length"])):
+				# Returns status code 511 = Invalid default values for Field
+				return self.returner(511)
+			elif "default" in field and ("ai" not in field or field["ai"] != True):
 				buff.update({"default": field["default"]})
 			else:
 				buff.update({"default": None})
@@ -373,7 +376,10 @@ class db:
 					buff.update({"null": True})
 				else:
 					buff.update({"null": False})
-				if "default" in field and (type(field["default"]) != bool):
+				if "default" in field and (((type(field["default"]) == int and field["type"] != "int") or (type(field["default"]) == str and field["type"] != "str") or (type(field["default"]) == bool and field["type"] != "bool") or (type(field["default"]) == float and field["type"] != "float")) or (len(str(field["default"])) > buff["length"])):
+					# Returns status code 511 = Invalid default values for Field
+					return self.returner(511)
+				elif "default" in field and ("ai" not in field or field["ai"] != True):
 					buff.update({"default": field["default"]})
 				else:
 					buff.update({"default": None})
