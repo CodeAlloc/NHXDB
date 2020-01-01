@@ -1,12 +1,12 @@
 #!/usr/bin/python3.7
 
-import NHXTest
-DB = NHXTest.db()
+import NHXDB
+DB = NHXDB.db()
 # Test Values
 valuesx = {
 	"name": "Test",
 	"username": "chmuhammadsohaib",
-	"password": "$0|n@!|o!$$0|n@!|o",
+	"password": "xxsadnjsdbnasnd",
 	"file": "/root/nhx.NHX"
 	}
 contentx = {
