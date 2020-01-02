@@ -438,19 +438,22 @@ class db:
 			to_update = {}
 			for field in values["fields"]:
 				data = None
-				if field["type"] == "int":
-					data = 0
-				elif field["type"] == "float":
-					data = 0.00
-				elif field["type"] == "str":
-					data = ""
-				elif field["type"] == "bool":
-					data = False
+				if "default" not in field:
+					if field["type"] == "int":
+						data = 0
+					elif field["type"] == "float":
+						data = 0.00
+					elif field["type"] == "str":
+						data = ""
+					elif field["type"] == "bool":
+						data = False
+				else:
+					data = field["default"]
 				to_update.update({field["name"]: data})
 			status = self.update_data(values["table_name"], {
 				"fields": [to_update],
 				"criteria": "*"	})
-			if status_code != 200:
+			if status != 200:
 				return self.returner(700)
 		elif values["operation"].lower() == "drop":
 			to_drop = values["fields"]
@@ -595,6 +598,8 @@ class db:
 			return self.returner(304)
 		if type(table_name) != str or type(values) != dict:
 			return self.returner(300)
+		if os.getcwd() != self.cwd:
+			os.chdir(self.cwd)
 		if os.path.exists("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
 			return self.returner(404)
 		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower())
@@ -609,7 +614,7 @@ class db:
 		indexread = []
 		to_alter = []
 		for field_name in values["fields"]:
-			to_alter.append(field_name.lower())
+			to_alter.append(field_name)
 		for field in fields:
 			field = literal_eval(field)
 			if field["attribute"] != None:
@@ -1085,173 +1090,191 @@ class db:
 				indexread.append(field["name"].lower())
 			else:
 				nindexread.append(field["name"].lower())
-		splitted = []
-		typ = 0
-		operand = 1
-		left = 2
-		right = 3
-		operands = []
-		if "==" in criteria:
-			splitted = ["all", "=="] + criteria.split("==")
-		elif "!=" in criteria:
-			splitted = ["all", "!="] + criteria.split("!=")
-		elif ">=" in criteria:
-			splitted = ["if", ">="] + criteria.split(">=")
-		elif "<=" in criteria:
-			splitted = ["if", "<="] + criteria.split("<=")
-		elif "<" in criteria:
-			splitted = ["if", "<"] + criteria.split("<")
-		elif ">" in criteria:
-			splitted = ["if", ">"] + criteria.split(">")
-		else:
-			return self.returner(605)
-		for operanda in splitted:
-			operands.append(operanda.strip())
-		flagged = False
-		try:
-			int(operands[right])
-		except ValueError:
-			flagged = True
-		if operands[right] == "" or operands[left] == "":
-			return self.returner(609)
-		if operands[typ] == "if" and flagged:
-			return self.returner(607)
-		crit = {}
-		results = False
-		for fieldaa in fields:
-			fieldaa = literal_eval(fieldaa)
-			if fieldaa["name"] == operands[left].lower():
-				results = True
-				if (fieldaa["type"] == "str" or fieldaa["type"] == "bool") and operands[typ] == "if":
-					return self.returner(606)
-				else:
-					if fieldaa["attribute"] != None:
-						crit.update({"name": operands[left].lower(), "value": operands[right], "type": operands[operand], "is_index": True})
+		if "criteria" not in values or values["criteria"] == "*":
+			nindexlines = []
+			indexlines = []
+			with open("index.NHX", "r+", newline="") as file:
+				reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
+				for row in reader:
+					indexlines.append(row)
+			with open("nindex.NHX", "r+", newline="") as file:
+				reader = csv.DictReader(file, delimiter="|", fieldnames=nindexread)
+				for row in reader:
+					nindexlines.append(row)
+			tout = indexlines + nindexlines
+			return self.returner(tout)
+		if "criteria" in values and type(values["criteria"]) == str and values["criteria"] != "*":
+			splitted = []
+			typ = 0
+			operand = 1
+			left = 2
+			right = 3
+			operands = []
+			if "==" in criteria:
+				splitted = ["all", "=="] + criteria.split("==")
+			elif "!=" in criteria:
+				splitted = ["all", "!="] + criteria.split("!=")
+			elif ">=" in criteria:
+				splitted = ["if", ">="] + criteria.split(">=")
+			elif "<=" in criteria:
+				splitted = ["if", "<="] + criteria.split("<=")
+			elif "<" in criteria:
+				splitted = ["if", "<"] + criteria.split("<")
+			elif ">" in criteria:
+				splitted = ["if", ">"] + criteria.split(">")
+			else:
+				return self.returner(605)
+			for operanda in splitted:
+				operands.append(operanda.strip())
+			flagged = False
+			try:
+				int(operands[right])
+			except ValueError:
+				flagged = True
+			if operands[right] == "" or operands[left] == "":
+				return self.returner(609)
+			if operands[typ] == "if" and flagged:
+				return self.returner(607)
+			crit = {}
+			results = False
+			for fieldaa in fields:
+				fieldaa = literal_eval(fieldaa)
+				if fieldaa["name"] == operands[left].lower():
+					results = True
+					if (fieldaa["type"] == "str" or fieldaa["type"] == "bool") and operands[typ] == "if":
+						return self.returner(606)
 					else:
-						crit.update({"name": operands[left].lower(), "value": operands[right], "type": operands[operand], "is_index": False})
-		if results != True:
-			return self.returner(608)
-		line_no = []
-		if field["attribute"] != None:
-			if crit["is_index"]:
-				with open("index.NHX", "r+", newline='') as file:
-					reader = csv.DictReader(file, fieldnames=indexread, delimiter="|")
-					for index, row in enumerate(reader):
-						if crit["type"] == "==":
-							if row[crit["name"]] == crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == "!=":
-							if row[crit["name"]] != crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == ">=":
-							if row[crit["name"]] >= crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == "<=":
-							if row[crit["name"]] <= crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == ">":
-							if row[crit["name"]] > crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == "<":
-							if row[crit["name"]] < crit["value"]:
-								line_no.append(index)
+						if fieldaa["attribute"] != None:
+							crit.update({"name": operands[left].lower(), "value": operands[right], "type": operands[operand], "is_index": True})
 						else:
-							line_no = False
+							crit.update({"name": operands[left].lower(), "value": operands[right], "type": operands[operand], "is_index": False})
+			if results != True:
+				return self.returner(608)
+			line_no = []
+			if field["attribute"] != None:
+				if crit["is_index"]:
+					with open("index.NHX", "r+", newline='') as file:
+						reader = csv.DictReader(file, fieldnames=indexread, delimiter="|")
+						for index, row in enumerate(reader):
+							if crit["type"] == "==":
+								if row[crit["name"]] == crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == "!=":
+								if row[crit["name"]] != crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == ">=":
+								if row[crit["name"]] >= crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == "<=":
+								if row[crit["name"]] <= crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == ">":
+								if row[crit["name"]] > crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == "<":
+								if row[crit["name"]] < crit["value"]:
+									line_no.append(index)
+							else:
+								line_no = False
+				else:
+					with open("nindex.NHX", "r+", newline='') as file:
+						reader = csv.DictReader(file, fieldnames=nindexread, delimiter="|")
+						for index, row in enumerate(reader):
+							if crit["type"] == "==":
+								if row[crit["name"]] == crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == "!=":
+								if row[crit["name"]] != crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == ">=":
+								if row[crit["name"]] >= crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == "<=":
+								if row[crit["name"]] <= crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == ">":
+								if row[crit["name"]] > crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == "<":
+								if row[crit["name"]] < crit["value"]:
+									line_no.append(index)
+							else:
+								line_no = False
+				if line_no == False:
+					# Returns status code 700 = Unknown Internal Error
+					return self.returner(700)
 			else:
-				with open("nindex.NHX", "r+", newline='') as file:
-					reader = csv.DictReader(file, fieldnames=nindexread, delimiter="|")
-					for index, row in enumerate(reader):
-						if crit["type"] == "==":
-							if row[crit["name"]] == crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == "!=":
-							if row[crit["name"]] != crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == ">=":
-							if row[crit["name"]] >= crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == "<=":
-							if row[crit["name"]] <= crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == ">":
-							if row[crit["name"]] > crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == "<":
-							if row[crit["name"]] < crit["value"]:
-								line_no.append(index)
-						else:
-							line_no = False
-			if line_no == False:
-				# Returns status code 700 = Unknown Internal Error
-				return self.returner(700)
+				if crit["is_index"]:
+					with open("index.NHX", "r+", newline='') as file:
+						reader = csv.DictReader(file, fieldnames=indexread, delimiter="|")
+						for index, row in enumerate(reader):
+							if crit["type"] == "==":
+								if row[crit["name"]] == crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == "!=":
+								if row[crit["name"]] != crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == ">=":
+								if row[crit["name"]] >= crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == "<=":
+								if row[crit["name"]] <= crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == ">":
+								if row[crit["name"]] > crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == "<":
+								if row[crit["name"]] < crit["value"]:
+									line_no.append(index)
+							else:
+								line_no = False
+				else:
+					with open("nindex.NHX", "r+", newline='') as file:
+						reader = csv.DictReader(file, fieldnames=nindexread, delimiter="|")
+						for index, row in enumerate(reader):
+							if crit["type"] == "==":
+								if row[crit["name"]] == crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == "!=":
+								if row[crit["name"]] != crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == ">=":
+								if row[crit["name"]] >= crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == "<=":
+								if row[crit["name"]] <= crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == ">":
+								if row[crit["name"]] > crit["value"]:
+									line_no.append(index)
+							elif crit["type"] == "<":
+								if row[crit["name"]] < crit["value"]:
+									line_no.append(index)
+							else:
+								line_no = False
+				if line_no == False:
+					return self.returner(700)
+			nindexlines = []
+			indexlines = []
+			with open("index.NHX", "r+", newline="") as file:
+				reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
+				for row in reader:
+					indexlines.append(row)
+			with open("nindex.NHX", "r+", newline="") as file:
+				reader = csv.DictReader(file, delimiter="|", fieldnames=nindexread)
+				for row in reader:
+					nindexlines.append(row)
+			tout = []
+			for line in line_no:
+				to_append = {}
+				to_append.update(indexlines[line])
+				to_append.update(nindexlines[line])
+				tout.append(to_append)
+			return self.returner(tout)
+		elif "criteria" not in values or values["criteria"] == "*":
+			pass
 		else:
-			if crit["is_index"]:
-				with open("index.NHX", "r+", newline='') as file:
-					reader = csv.DictReader(file, fieldnames=indexread, delimiter="|")
-					for index, row in enumerate(reader):
-						if crit["type"] == "==":
-							if row[crit["name"]] == crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == "!=":
-							if row[crit["name"]] != crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == ">=":
-							if row[crit["name"]] >= crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == "<=":
-							if row[crit["name"]] <= crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == ">":
-							if row[crit["name"]] > crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == "<":
-							if row[crit["name"]] < crit["value"]:
-								line_no.append(index)
-						else:
-							line_no = False
-			else:
-				with open("nindex.NHX", "r+", newline='') as file:
-					reader = csv.DictReader(file, fieldnames=nindexread, delimiter="|")
-					for index, row in enumerate(reader):
-						if crit["type"] == "==":
-							if row[crit["name"]] == crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == "!=":
-							if row[crit["name"]] != crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == ">=":
-							if row[crit["name"]] >= crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == "<=":
-							if row[crit["name"]] <= crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == ">":
-							if row[crit["name"]] > crit["value"]:
-								line_no.append(index)
-						elif crit["type"] == "<":
-							if row[crit["name"]] < crit["value"]:
-								line_no.append(index)
-						else:
-							line_no = False
-			if line_no == False:
-				return self.returner(700)
-		nindexlines = []
-		indexlines = []
-		with open("index.NHX", "r+", newline="") as file:
-			reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
-			for row in reader:
-				indexlines.append(row)
-		with open("nindex.NHX", "r+", newline="") as file:
-			reader = csv.DictReader(file, delimiter="|", fieldnames=nindexread)
-			for row in reader:
-				nindexlines.append(row)
-		tout = []
-		for line in line_no:
-			to_append = {}
-			to_append.update(nindexlines[line])
-			to_append.update(indexlines[line])
-			tout.append(to_append)
-		return self.returner(tout)
+			return self.returner(300)
 
 
 if __name__ == "__main__":

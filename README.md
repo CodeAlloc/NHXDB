@@ -213,7 +213,7 @@ Since this Database is designed to be as developer friendly as possible, we beli
 | 610 | No criteria given
 | 700 | Unknown Internal Error
 
-> Key: 200 is Success, 3xx is Database related error, 404 is not found error for any, 5xx is Table related Error, 6xx is data related error, and 700 is Internal error. (Approximately)
+> Key: 1xx is Database Setting Up, 200 is Success, 3xx is Database related error, 404 is not found error for any, 5xx is Table related Error, 6xx is data related error, and 700 is Internal error. (Approximately)
 
 License
 ----

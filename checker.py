@@ -39,7 +39,7 @@ valuex = {
 	"operation": "add",
 	"fields":[{
 		"name": "hq",
-		"type": "str"
+		"type": "int"
 	}]
 	}
 dropx = {
@@ -48,9 +48,9 @@ dropx = {
 	"fields": ["hq"]
 	}
 datax = {
-	"true": "sdaasfsdfgd",
-	"hq": "ddfgfgdfrdg",
-	"password": 1313623
+	"true": "saasdfer32gd",
+	"hq": 131,
+	"password": 131162313
 	}
 criteria = {
 	"fields": {
@@ -60,19 +60,19 @@ criteria = {
 		},
 	"criteria": "hash >= 0"
 	}
-#status = DB.isPermitted()
-#status = DB.create(valuesx)
+status = DB.isPermitted()
+status = DB.create(valuesx)
 status = DB.login(valuesx)
-#status = DB.drop()
-#status = DB.backup("/root/")
-#status = DB.restore(valuesx)
-#status = DB.create_table(contentx)
+status = DB.drop()
+status = DB.backup("/root/")
+status = DB.restore(valuesx)
+status = DB.create_table(contentx)
 status = DB.alter_table(valuex)
-#status = DB.alter_table(dropx)
-#status = DB.drop_table("NHX")
-#status = DB.insert_data("NHX", datax)
-#status = DB.select_data("NHX", "hash >= 0")
-#status = DB.update_data("NHX", criteria)
-#status = DB.delete_data("NHX", "hash >= 1")
-#status = DB.truncate_table("NHX")
+status = DB.alter_table(dropx)
+status = DB.drop_table("NHX")
+status = DB.insert_data("NHX", datax)
+status = DB.select_data("NHX", "hash >= 0")
+status = DB.update_data("NHX", criteria)
+status = DB.delete_data("NHX", "hash >= 1")
+status = DB.truncate_table("NHX")
 print(status)
