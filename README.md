@@ -153,8 +153,9 @@ database.select_data("usernames", "password == secret_password") # Returns list 
 ```
 #### .update_data(table_name, properties)
 Updates the existing data in ```table_name``` with properties as a dictionary with key ```criteria```, same as that for ```select_data()```, and key ```fields```, as a dictionary containing ```field name``` as key(s) for the dictionary and their value as the data to be updated. Returns a status code. If field(s) added, and data exists already for the table, the values defaulted for the field(s) is as follows:
+
 | Field Type | Default Data |
-|----|-------|
+|----|----|
 |int|0
 |str|" " (Empty String)
 |float| 0.00
