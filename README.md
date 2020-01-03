@@ -1,7 +1,10 @@
 # NHXDB [![Build Status](https://travis-ci.com/chmuhammadsohaib/NHXDB.svg?branch=master)](https://travis-ci.com/chmuhammadsohaib/NHXDB)
 
-NHXDB is a lightweight Database which combines the SQL-like language with the ease of ORM syntax
-
+NHXDB is a lightweight Database which combines the SQL language with the ease of ORM syntax
+# Update v1.1
+- ##### Major Bug Fixes; Quality improvement
+- ##### Added Default values for updating (add) a field, for the previous stored rows containing no data of the added field
+- ##### Added .isPermitted() function to check permissions
 
 # Features currently supported
 
@@ -52,7 +55,8 @@ database = NHXDB.db()
 ```
 
 All the functions are then called on the ```database``` variable.
-
+#### .isPermitted()
+Checks whether the permissions to read/write is granted in the desired folder. Returns 200 if granted, 101 if denied.
 #### .create(properties)
 To create a new database, with ```properties``` as an argument. The ```properties``` is a dictionary with ```name```, ```username```, and ```password``` as key. "name" is the name of the database to be created.  Returns a status code.
 >You are recommended to use more than 8 characters in both username and password to prevent any kind of brute-force attack, however there is no compulsion on that.
@@ -179,6 +183,8 @@ Since this Database is designed to be as developer friendly as possible, we beli
 
 | Status Code | Meaning |
 | --------| ---------|
+| 100 | Database System not Initialized Yet
+| 101 | Permissions Error
 | 200 | Success
 | 300 | Invalid Entry
 | 301 | Already Exists
@@ -197,6 +203,7 @@ Since this Database is designed to be as developer friendly as possible, we beli
 | 508 | Cannot have bool type in an attributed field
 | 509 | Cannot drop a field already not in table
 | 510 | Unsupported Operation
+| 511 | Invalid Default values for Field
 | 600 | Values for a non Null field is not specified
 | 601 | Values provided do not match their types
 | 602 | Values provided are longer than the size allocated
@@ -210,7 +217,7 @@ Since this Database is designed to be as developer friendly as possible, we beli
 | 610 | No criteria given
 | 700 | Unknown Internal Error
 
-> Key: 200 is Success, 3xx is Database related error, 404 is not found error for any, 5xx is Table related Error, 6xx is data related error, and 700 is Internal error. (Approximately)
+> Key: 1xx is Database Setting Up, 200 is Success, 3xx is Database related error, 404 is not found error for any, 5xx is Table related Error, 6xx is data related error, and 700 is Internal error. (Approximately)
 
 License
 ----
