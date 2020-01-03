@@ -451,7 +451,7 @@ class db:
 					data = field["default"]
 				to_update.update({field["name"]: data})
 			status = self.update_data(values["table_name"], {
-				"fields": [to_update],
+				"fields": to_update,
 				"criteria": "*"	})
 			if status != 200:
 				return self.returner(700)
@@ -622,12 +622,12 @@ class db:
 			else:
 				nindexread.append(field["name"].lower())
 		flagged = True
-		for field in fields:
-			field = literal_eval(field)
-			if field["name"] in to_alter:
-				if field["attribute"].lower() == "primary" or field["attribute"].lower() == "unique":
-					return self.returner(603)
-				if "criteria" not in values or values["criteria"] == "*":
+		if "criteria" not in values or values["criteria"] == "*":
+			for field in fields:
+				field = literal_eval(field)
+				if field["name"] in to_alter:
+					if field["attribute"] == "primary" or field["attribute"] == "unique":
+						return self.returner(603)
 					flagged = False
 					to_up = []
 					if field["attribute"] != None:
@@ -650,7 +650,7 @@ class db:
 							writer = csv.DictWriter(file, fieldnames=nindexread, delimiter="|")
 							for index, row in enumerate(to_up):
 								writer.writerow(row)
-		if "criteria" in values and type(values["criteria"]) == str and values["criteria"] != "*":
+		elif "criteria" in values and type(values["criteria"]) == str and values["criteria"] != "*":
 			flagged = False
 			splitted = []
 			typ = 0
@@ -813,7 +813,7 @@ class db:
 				for fieldx in fields:
 					fieldx = literal_eval(fieldx)
 					if field == fieldx["name"]:
-						if (fieldx["attribute"]!= None and(fieldx["attribute"] == "primary" or fieldx["attribute"] == "index")) and (values["fields"][field] == "" or values["fields"][field] == None):
+						if (fieldx["attribute"] != None and(fieldx["attribute"] == "primary" or fieldx["attribute"] == "index")) and (values["fields"][field] == "" or values["fields"][field] == None):
 							return self.returner(604)
 						if (fieldx["null"] == False) and (values["fields"][field] == "" or values["fields"][field] == None) and (fieldx["ai"] == False and fieldx["default"] == None):
 							return self.returner(600)
@@ -822,12 +822,13 @@ class db:
 						if (fieldx["type"].lower() == "int" and type(values["fields"][field]) != int) or (fieldx["type"] == "float" and type(values["fields"][field]) != float) or (fieldx["type"] == "str" and type(values["fields"][field]) != str) or ((fieldx["type"] == "bool" and type(values["fields"][field]) != bool)):
 							return self.returner(601)
 						flag = False
-						if fieldx["attribute"].lower() == "unique" or fieldx["attribute"].lower() == "primary":
+						if fieldx["attribute"] == "unique" or fieldx["attribute"] == "primary":
 							file = open("index.NHX", "r+", newline='')
 							reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
 							flagged = False
 							for row in reader:
-								if str(values[fieldx["name"].lower()]) == str(row[fieldx["name"]]):
+								print(fieldx, values, row)
+								if str(values["fields"][fieldx["name"].lower()]) == str(row[fieldx["name"]]):
 									flag = True
 									break
 							if flag:
@@ -855,8 +856,6 @@ class db:
 						writer = csv.DictWriter(file, delimiter="|", fieldnames=nindexread)
 						for line in nindexlines:
 							writer.writerow(line)
-		elif "criteria" not in values or values["criteria"] == "*":
-			pass
 		else:
 			return self.returner(300)
 		return self.returner(200)
@@ -1090,7 +1089,7 @@ class db:
 				indexread.append(field["name"].lower())
 			else:
 				nindexread.append(field["name"].lower())
-		if "criteria" not in values or values["criteria"] == "*":
+		if criteria == "*":
 			nindexlines = []
 			indexlines = []
 			with open("index.NHX", "r+", newline="") as file:
@@ -1103,7 +1102,7 @@ class db:
 					nindexlines.append(row)
 			tout = indexlines + nindexlines
 			return self.returner(tout)
-		if "criteria" in values and type(values["criteria"]) == str and values["criteria"] != "*":
+		if criteria != "*":
 			splitted = []
 			typ = 0
 			operand = 1
@@ -1271,10 +1270,6 @@ class db:
 				to_append.update(nindexlines[line])
 				tout.append(to_append)
 			return self.returner(tout)
-		elif "criteria" not in values or values["criteria"] == "*":
-			pass
-		else:
-			return self.returner(300)
 
 
 if __name__ == "__main__":

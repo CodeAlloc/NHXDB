@@ -1,7 +1,10 @@
 # NHXDB [![Build Status](https://travis-ci.com/chmuhammadsohaib/NHXDB.svg?branch=master)](https://travis-ci.com/chmuhammadsohaib/NHXDB)
 
-NHXDB is a lightweight Database which combines the SQL-like language with the ease of ORM syntax
-
+NHXDB is a lightweight Database which combines the SQL language with the ease of ORM syntax
+# Update v1.1
+- ##### Major Bug Fixes; Quality improvement
+- ##### Added Default values for updating (add) a field, for the previous stored rows containing no data of the added field
+- ##### Added .isPermitted() function to check permissions
 
 # Features currently supported
 
@@ -52,7 +55,8 @@ database = NHXDB.db()
 ```
 
 All the functions are then called on the ```database``` variable.
-
+#### .isPermitted()
+Checks whether the permissions to read/write is granted in the desired folder. Returns 200 if granted, 101 if denied.
 #### .create(properties)
 To create a new database, with ```properties``` as an argument. The ```properties``` is a dictionary with ```name```, ```username```, and ```password``` as key. "name" is the name of the database to be created.  Returns a status code.
 >You are recommended to use more than 8 characters in both username and password to prevent any kind of brute-force attack, however there is no compulsion on that.
