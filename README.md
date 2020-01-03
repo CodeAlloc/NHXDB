@@ -4,7 +4,7 @@ NHXDB is a lightweight Database which combines the SQL language with the ease of
 # Update v1.1
 - ##### Major Bug Fixes; Quality improvement
 - ##### Added Default values for updating (add) a field, for the previous stored rows containing no data of the added field
-- ##### Added .isPermitted() function to check permissions
+-  ##### Added .isPermitted() function to check permissions
 
 # Features currently supported
 
@@ -152,7 +152,16 @@ database.select_data("usernames", "*") # Returns [{example: value} etc]
 database.select_data("usernames", "password == secret_password") # Returns list with dictionaries only matching the described criteria
 ```
 #### .update_data(table_name, properties)
-Updates the existing data in ```table_name``` with properties as a dictionary with key ```criteria```, same as that for ```select_data()```, and key ```fields```, as a dictionary containing ```field name``` as key(s) for the dictionary and their value as the data to be updated. Returns a status code. 
+Updates the existing data in ```table_name``` with properties as a dictionary with key ```criteria```, same as that for ```select_data()```, and key ```fields```, as a dictionary containing ```field name``` as key(s) for the dictionary and their value as the data to be updated. Returns a status code. If field(s) added, and data exists already for the table, the values defaulted for the field(s) is as follows:
+
+| Field Type | Default Data |
+|----|----|
+|int|0
+|str|" " (Empty String)
+|float| 0.00
+|bool| False
+
+
 ##### For Example:
 ###
 ```sh
