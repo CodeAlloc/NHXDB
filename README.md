@@ -1,6 +1,6 @@
 # NHXDB [![Build Status](https://travis-ci.com/chmuhammadsohaib/NHXDB.svg?branch=master)](https://travis-ci.com/chmuhammadsohaib/NHXDB)
 
-NHXDB is a lightweight Database which combines the SQL-like language with the ease of ORM syntax
+NHXDB is a lightweight Database which combines the SQL language with the ease of ORM syntax
 # Update v1.1
 - ##### Major Bug Fixes; Quality improvement
 - ##### Added Default values for updating (add) a field, for the previous stored rows containing no data of the added field
