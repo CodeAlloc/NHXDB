@@ -210,9 +210,8 @@ Since this Database is designed to be as developer friendly as possible, we beli
 | 506 | Cannot create two fields with same name
 | 507 | Cannot have length more than 255 for int and more than 16384 for str
 | 508 | Cannot have bool type in an attributed field
-| 509 | Cannot drop a field already not in table
-| 510 | Unsupported Operation
-| 511 | Invalid Default values for Field
+| 509 | Unsupported Operation
+| 510 | Invalid Default values for Field
 | 600 | Values for a non Null field is not specified
 | 601 | Values provided do not match their types
 | 602 | Values provided are longer than the size allocated
@@ -227,11 +226,5 @@ Since this Database is designed to be as developer friendly as possible, we beli
 | 700 | Unknown Internal Error
 
 > Key: 1xx is Database Setting Up, 200 is Success, 3xx is Database related error, 404 is not found error for any, 5xx is Table related Error, 6xx is data related error, and 700 is Internal error. (Approximately)
-
-License
-----
-
-MIT
-
 
 **Found it useful? Go, install the module and get started!**

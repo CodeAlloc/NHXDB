@@ -43,16 +43,16 @@ valuex = {
 dropx = {
 	"table_name": "NHX",
 	"operation": "drop",
-	"fields": ["hq"]
+	"fields": ["true"]
 	}
 datax = {
-	"true": "afehsdufsr",
-	"hq": 131,
-	"password": 97127
+	"true": "dsadsaddsa",
+	"hq": 1331,
+	"password": 9714227
 	}
 criteria = {
 	"fields": {
-		"name": "SomethfsfsjfgdingDIFF",
+		"true": "SomethfsfsjfgdingDIFF",
 		"password": 12164342113,
 		"hq": 101
 		},
