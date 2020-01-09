@@ -28,6 +28,7 @@ class db:
 			self.cwd = os.getcwd()
 			self.initialized = True
 			self.permissions = True
+			self.pop = False
 		except PermissionError:
 			self.permissions = False
 			self.initialized = False
@@ -297,8 +298,8 @@ class db:
 			else:
 				buff.update({"null": False})
 			if "default" in field and (((type(field["default"]) == int and field["type"] != "int") or (type(field["default"]) == str and field["type"] != "str") or (type(field["default"]) == bool and field["type"] != "bool") or (type(field["default"]) == float and field["type"] != "float")) or (len(str(field["default"])) > buff["length"])):
-				# Returns status code 511 = Invalid default values for Field
-				return self.returner(511)
+				# Returns status code 510 = Invalid default values for Field
+				return self.returner(510)
 			elif "default" in field and ("ai" not in field or field["ai"] != True):
 				buff.update({"default": field["default"]})
 			else:
@@ -337,9 +338,9 @@ class db:
 		if type(table_name) != str:
 			return self.returner(300)
 		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/")
-		if os.path.exists(table_name) != True:
+		if os.path.exists(table_name.lower()) != True:
 			return self.returner(404)
-		shutil.rmtree(table_name)
+		shutil.rmtree(table_name.lower())
 		return self.returner(200)
 
 
@@ -421,8 +422,8 @@ class db:
 				else:
 					buff.update({"null": False})
 				if "default" in field and (((type(field["default"]) == int and field["type"] != "int") or (type(field["default"]) == str and field["type"] != "str") or (type(field["default"]) == bool and field["type"] != "bool") or (type(field["default"]) == float and field["type"] != "float")) or (len(str(field["default"])) > buff["length"])):
-					# Returns status code 511 = Invalid default values for Field
-					return self.returner(511)
+					# Returns status code 510 = Invalid default values for Field
+					return self.returner(510)
 				elif "default" in field and ("ai" not in field or field["ai"] != True):
 					buff.update({"default": field["default"]})
 				else:
@@ -462,6 +463,16 @@ class db:
 			for field in values["fields"]:
 				if type(field) != str:
 					return self.returner(300)
+			initial_dir = os.getcwd()
+			to_edit = {}
+			for field in values["fields"]:
+				to_edit.update({field: None})
+			self.pop = True
+			status_code = self.update_data(values["table_name"], {"fields": to_edit, "criteria": "*"})
+			self.pop = False
+			if status_code != 200:
+				return self.returner(status_code)
+			os.chdir(initial_dir)
 			with open("config.NHX", "r+", newline="") as file:
 				reader = csv.reader(file, delimiter="|")
 				for index, row in enumerate(reader):
@@ -469,21 +480,16 @@ class db:
 						fields = row
 			for field in fields:
 				field = literal_eval(field)
-				flagged = True
 				if field["name"].lower() in to_drop:
-					flagged = False
 					pass
 				else:
 					to_update.append(field)
-			if flagged:
-				# Returns status Code 509 = Cannot drop a field already not in Table
-				return self.returner(509)
 			with open("config.NHX", "w+", newline='') as file:
 				writer = csv.writer(file, delimiter='|')
 				writer.writerow(to_update)
 		else:
-			# Returns status code 510 = Unsupported Operation
-			return self.returner(510)
+			# Returns status code 509 = Unsupported Operation
+			return self.returner(509)
 		return self.returner(200)
 
 
@@ -598,6 +604,8 @@ class db:
 			return self.returner(304)
 		if type(table_name) != str or type(values) != dict:
 			return self.returner(300)
+		if "fields" not in values or "criteria" not in values:
+			return self.returner(302)
 		if os.getcwd() != self.cwd:
 			os.chdir(self.cwd)
 		if os.path.exists("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
@@ -622,21 +630,34 @@ class db:
 			else:
 				nindexread.append(field["name"].lower())
 		flagged = True
-		if "criteria" not in values or values["criteria"] == "*":
+		if values["criteria"] == "*":
 			for field in fields:
 				field = literal_eval(field)
 				if field["name"] in to_alter:
-					if field["attribute"] == "primary" or field["attribute"] == "unique":
-						return self.returner(603)
+					if self.pop != True:
+						if field["attribute"] == "primary" or field["attribute"] == "unique":
+							return self.returner(603)
+						if (field["null"] == False) and (values["fields"][field["name"]] == "" or values["fields"][field["name"]] == None) and (field["ai"] == False and field["default"] == None):
+							return self.returner(600)
+						if len(str(values["fields"][field["name"]])) > field["length"]:
+							return self.returner(602)
+						if (field["type"].lower() == "int" and type(values["fields"][field["name"]]) != int) or (field["type"] == "float" and type(values["fields"][field["name"]]) != float) or (field["type"] == "str" and type(values["fields"][field["name"]]) != str) or ((field["type"] == "bool" and type(values["fields"][field["name"]]) != bool)):
+							return self.returner(601)
 					flagged = False
 					to_up = []
 					if field["attribute"] != None:
 						with open("index.NHX", "r+", newline='') as file:
 							reader = csv.DictReader(file, fieldnames=indexread, delimiter="|")
 							for index, row in enumerate(reader):
-								row.update({field["name"] : values["fields"][field["name"]]})
-								to_up.append(row)
+								if self.pop and field["name"] in values["fields"]:
+									row.pop(field["name"])
+									to_up.append(row)
+								else:
+									row.update({field["name"] : values["fields"][field["name"]]})
+									to_up.append(row)
 						with open("index.NHX", "w+", newline='') as file:
+							if self.pop:
+								indexread.remove(field["name"])
 							writer = csv.DictWriter(file, fieldnames=indexread, delimiter="|")
 							for index, row in enumerate(to_up):
 								writer.writerow(row)
@@ -644,9 +665,15 @@ class db:
 						with open("nindex.NHX", "r+", newline='') as file:
 							reader = csv.DictReader(file, fieldnames=nindexread, delimiter="|")
 							for index, row in enumerate(reader):
-								row.update({field["name"] : values["fields"][field["name"]]})
-								to_up.append(row)
+								if self.pop and field["name"] in values["fields"]:
+									row.pop(field["name"])
+									to_up.append(row)
+								else:
+									row.update({field["name"] : values["fields"][field["name"]]})
+									to_up.append(row)
 						with open("nindex.NHX", "w+", newline='') as file:
+							if self.pop:
+								nindexread.remove(field["name"])
 							writer = csv.DictWriter(file, fieldnames=nindexread, delimiter="|")
 							for index, row in enumerate(to_up):
 								writer.writerow(row)
@@ -827,7 +854,6 @@ class db:
 							reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
 							flagged = False
 							for row in reader:
-								print(fieldx, values, row)
 								if str(values["fields"][fieldx["name"].lower()]) == str(row[fieldx["name"]]):
 									flag = True
 									break
@@ -1100,7 +1126,18 @@ class db:
 				reader = csv.DictReader(file, delimiter="|", fieldnames=nindexread)
 				for row in reader:
 					nindexlines.append(row)
-			tout = indexlines + nindexlines
+			tout = []
+			try:
+				nindexlines[0]
+			except IndexError:
+				return self.returner(indexlines)
+			try:
+				indexlines[0]
+			except IndexError:
+				return self.returner(nindexlines)
+			for index, row in enumerate(indexlines):
+				row.update(nindexlines[index])
+				tout.append(row)
 			return self.returner(tout)
 		if criteria != "*":
 			splitted = []
