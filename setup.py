@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="NHXDB",
-    version="v1.1.0",
+    version="v1.1.1",
     author="Ch. Muhammad Sohaib",
     author_email="chmuhammadsohaib@gmail.com",
     description="A lightweight Database Module with a blend of SQL Language and ORM syntax",
