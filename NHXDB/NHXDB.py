@@ -3,10 +3,14 @@ from ast import literal_eval
 
 class db:
 
-	def __init__(self):
+	def __init__(self, verbose=False):
 		try:
 			self.logged_in = False
 			self.logged_DB = None
+			if verbose == True:
+				self.verbose = True
+			else:
+				self.verbose = False
 			if sys.platform.lower().startswith("linux") or sys.platform.lower().startswith("darwin"):
 				os.chdir("/usr/local/")
 				if os.path.exists("NHX"):
@@ -43,8 +47,46 @@ class db:
 
 	def returner(self, code):
 		os.chdir(self.cwd)
-		return code
-
+		if self.verbose == False:
+			return code
+		else:
+			error = {100: "Database System is not yet initialized",
+				101: "Insufficient Permissions or permission denied",
+				300: "Invalid Entry",
+				301: "The entry already exists",
+				302: "Incomplete Data",
+				303: "Credentials Error",
+				304: "Cannot process because you are not logged in",
+				404: "Not Found",
+				500: "Data file for the specified table already exists",
+				501: "Cannot increment any data type other than int",
+				502: "Cannot have more than one Primary Field in same Table",
+				503: "Primary/Index values cannot be specified as Null",
+				504: "Default cannot be Null if field is specified as not Null",
+				505: "Attributes cannot be other than Primary, Index or Unique",
+				506: "Cannot create two fields with same names",
+				507: "Cannot have length more than 255 for int, 16384 for str",
+				508: "Cannot have a bool data type for a field specified as attributed field",
+				509: "Specified operation is unsupported",
+				510: "Invalid Default values for he specified Field",
+				600: "Values for a non Null Field is not specified",
+				601: "Values provided do not match their data types",
+				602: "Values provided are longer than the size allocated",
+				603: "Unique and Primary values can not have previously contained values",
+				604: "Primary and Index fields cannot be empty",
+				605: "Cannot find a valid criteria",
+				606: "Cannot compare using int operands on non int fields",
+				607: "Cannot have the right operand as non int on int comparisons",
+				608: "Expected Left operand as field Name, no field with specified name found",
+				609: "Cannot find required operands",
+				610: "No Criteria provided",
+				700: "Unknown Internal Error"}
+			if code == 200:
+				return code
+			else:
+				print("NHXError (" + code + "): " + error[code] + ".")
+				raise SystemExit
+				
 
 	def validator(self, db_properties, no_cred=False):
 		self.db_properties = db_properties
