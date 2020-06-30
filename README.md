@@ -51,9 +51,9 @@ NHXDB syntax is made as closer as possible to the syntax of Python. Moreover, th
 
 The main database object is called by the following syntax:
 ```sh
-database = NHXDB.db()
+database = NHXDB.db(<argument>)
 ```
-
+If verbose functionality is required, use 1 or True as argument to enable verbosity.Using this allows to return, instead of status code, an error on screen (when occured).
 All the functions are then called on the ```database``` variable.
 #### .isPermitted()
 Checks whether the permissions to read/write is granted in the desired folder. Returns 200 if granted, 101 if denied.
@@ -216,7 +216,7 @@ Since this Database is designed to be as developer friendly as possible, we beli
 | 601 | Values provided do not match their types
 | 602 | Values provided are longer than the size allocated
 | 603 | Unique and Primary values can not have previous values
-| 604 | Primary and Index fields cannot contain be empty
+| 604 | Primary and Index fields cannot be empty
 | 605 | Cannot find a valid criteria
 | 606 | Cannot compare with int operands on non int fields
 | 607 | Cannot have the right operand as non int on int comparisons
