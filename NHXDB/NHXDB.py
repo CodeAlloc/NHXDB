@@ -21,7 +21,7 @@ class db:
 				os.mkdir("cache")
 				shutil.rmtree("cache")
 			elif sys.platform.lower().startswith("win32"): 
-				os.chdir("C:\\Users\\" + os.getlogin() + "\\AppData\\")
+				os.chdir("C:\\Users\\" + os.getlogin() + "\\AppData\\Local\\")
 				if os.path.exists("NHX"):
 					os.chdir("NHX")
 				else:
