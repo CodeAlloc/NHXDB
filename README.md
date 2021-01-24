@@ -1,10 +1,12 @@
 # NHXDB
 
 NHXDB is a lightweight Database which combines the SQL language with the ease of ORM syntax
-# Update v1.1
+# Update v1.2
 - ##### Major Bug Fixes; Quality improvement
 - ##### Added Default values for updating (add) a field, for the previous stored rows containing no data of the added field
--  ##### Added .isPermitted() function to check permissions
+- ##### Added .isPermitted() function to check permissions
+- ##### Restructure of Storage settings and change of data storage locations
+- ##### Verbosity mode added as a better support for development
 
 # Features currently supported
 
@@ -51,9 +53,9 @@ NHXDB syntax is made as closer as possible to the syntax of Python. Moreover, th
 
 The main database object is called by the following syntax:
 ```sh
-database = NHXDB.db(<argument>)
+database = NHXDB.db(<verbose=False>)
 ```
-If verbose functionality is required, use 1 or True as argument to enable verbosity.Using this allows to return, instead of status code, an error on screen (when occured).
+If verbose functionality is required, use 1 or True as argument to enable verbosity (or otherwise verbose=True). This allows to return, instead of status code, an exception on screen (when occured).
 All the functions are then called on the ```database``` variable.
 #### .isPermitted()
 Checks whether the permissions to read/write is granted in the desired folder. Returns 200 if granted, 101 if denied.
