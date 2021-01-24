@@ -12,7 +12,7 @@ class db:
 			else:
 				self.verbose = False
 			if sys.platform.lower().startswith("linux") or sys.platform.lower().startswith("darwin"):
-				os.chdir("/usr/local/")
+				os.chdir("/usr/local/share/")
 				if os.path.exists("NHX"):
 					os.chdir("NHX")
 				else:
@@ -21,7 +21,7 @@ class db:
 				os.mkdir("cache")
 				shutil.rmtree("cache")
 			elif sys.platform.lower().startswith("win32"): 
-				os.chdir("C:\\ProgramData")
+				os.chdir("C:\\Users\\" + os.getlogin() + "\\AppData\\")
 				if os.path.exists("NHX"):
 					os.chdir("NHX")
 				else:
@@ -50,7 +50,8 @@ class db:
 		if self.verbose == False:
 			return code
 		else:
-			error = {100: "Database System is not yet initialized",
+			error = {
+				100: "Database System is not yet initialized",
 				101: "Insufficient Permissions or permission denied",
 				300: "Invalid Entry",
 				301: "The entry already exists",
@@ -80,7 +81,8 @@ class db:
 				608: "Expected Left operand as field Name, no field with specified name found",
 				609: "Cannot find required operands",
 				610: "No Criteria provided",
-				700: "Unknown Internal Error"}
+				700: "Unknown Internal Error"
+				}
 			if code == 200:
 				return code
 			else:
@@ -159,12 +161,12 @@ class db:
 			# Returns status code 100 = Database System not Initialized Yet
 			return 100
 		status_code = self.validator(db_properties)
-		dir_exists = os.path.exists("./NHX_DB_Dat/")
+		dir_exists = os.path.exists("./NHXDB-Data/")
 		if dir_exists:
-			os.chdir("./NHX_DB_Dat")
+			os.chdir("./NHXDB-Data")
 		else:
-			os.mkdir("./NHX_DB_Dat")
-			os.chdir("./NHX_DB_Dat")
+			os.mkdir("./NHXDB-Data")
+			os.chdir("./NHXDB-Data")
 		if status_code != 200:
 			return self.returner(status_code)
 		if os.path.exists(self.database_name) and os.path.isfile(self.database_name + "/config.NHX"):
@@ -189,11 +191,11 @@ class db:
 		if self.status_code != 200:
 			return self.returner(self.status_code)
 		# Verification Starts
-		if os.path.isfile("./NHX_DB_Dat/" + self.database_name + "/config.NHX") == False and os.path.exists("./NHX_DB_Dat/" + self.database_name + "/tables/") == False:
+		if os.path.isfile("./NHXDB-Data/" + self.database_name + "/config.NHX") == False and os.path.exists("./NHXDB-Data/" + self.database_name + "/tables/") == False:
 			# Returns status code 404 = Not found
 			self.status_code = 404
 			return self.returner(404)
-		with open("./NHX_DB_Dat/" + self.database_name + "/config.NHX") as readf:
+		with open("./NHXDB-Data/" + self.database_name + "/config.NHX") as readf:
 			self.database_usr = self.database_usr
 			self.database_pass = self.database_pass
 			content = readf.read()
@@ -217,7 +219,7 @@ class db:
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
-		os.chdir("./NHX_DB_Dat/")
+		os.chdir("./NHXDB-Data/")
 		shutil.rmtree(self.database_name)
 		self.logged_in = False
 		return self.returner(200)
@@ -231,15 +233,15 @@ class db:
 			return self.returner(304)
 		if type(path) != str:
 			return self.returner(300)
-		shutil.make_archive("./NHX_DB_Dat/cache" + self.database_name, "zip", "./NHX_DB_Dat/"+ self.database_name)
-		file = open("./NHX_DB_Dat/cache" + self.database_name + ".zip", "r+b")
+		shutil.make_archive("./NHXDB-Data/cache" + self.database_name, "zip", "./NHXDB-Data/"+ self.database_name)
+		file = open("./NHXDB-Data/cache" + self.database_name + ".zip", "r+b")
 		data = file.read()
 		file.close()
 		to_write = data[2:] + 64*b"\x4e\x48\x58"
 		file = open(path + self.database_name + ".NHX", "w+b")
 		file.write(to_write)
 		file.close()
-		os.remove("./NHX_DB_Dat/cache" + self.database_name + ".zip")
+		os.remove("./NHXDB-Data/cache" + self.database_name + ".zip")
 		return self.returner(200)
 
 
@@ -250,12 +252,12 @@ class db:
 		status_code = self.validator(db_properties)
 		if status_code != 200:
 			return self.returner(status_code)
-		dir_exists = os.path.exists("./NHX_DB_Dat/")
+		dir_exists = os.path.exists("./NHXDB-Data/")
 		if dir_exists:
-			os.chdir("./NHX_DB_Dat")
+			os.chdir("./NHXDB-Data")
 		else:
-			os.mkdir("./NHX_DB_Dat")
-			os.chdir("./NHX_DB_Dat")
+			os.mkdir("./NHXDB-Data")
+			os.chdir("./NHXDB-Data")
 		if "file" not in db_properties:
 			return self.returner(302)
 		if type(db_properties["file"]) != str:
@@ -303,7 +305,7 @@ class db:
 			return self.returner(300)
 		no_field = len(structure["fields"])
 		table_name = structure["name"].lower()
-		os.chdir("./NHX_DB_Dat")
+		os.chdir("./NHXDB-Data")
 		if os.path.exists("./" + self.database_name + "/tables/") == False:
 			os.mkdir("./" + self.database_name + "/tables/")
 		os.chdir("./" + self.database_name + "/tables/")
@@ -315,7 +317,7 @@ class db:
 		status_code = self.valitable(structure["fields"])
 		if status_code != 200:
 			return self.returner(status_code)
-		os.chdir("./NHX_DB_Dat/" + self.database_name + "/tables/" + table_name)
+		os.chdir("./NHXDB-Data/" + self.database_name + "/tables/" + table_name)
 		to_write = []
 		to_write_index = []
 		to_write_data = []
@@ -379,7 +381,7 @@ class db:
 			return self.returner(304)
 		if type(table_name) != str:
 			return self.returner(300)
-		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/")
+		os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/")
 		if os.path.exists(table_name.lower()) != True:
 			return self.returner(404)
 		shutil.rmtree(table_name.lower())
@@ -394,7 +396,7 @@ class db:
 			return self.returner(304)
 		if type(table_name) != str:
 			return self.returner(300)
-		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/")
+		os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/")
 		if os.path.exists(table_name.lower()) != True:
 			return self.returner(404)
 		os.chdir(table_name.lower())
@@ -412,7 +414,7 @@ class db:
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
-		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/")
+		os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/")
 		if "fields" not in values or "table_name" not in values or "operation" not in values:
 			return self.returner(302)
 		if type(values) != dict or type(values["table_name"]) != str or type(values["operation"]) != str or type(values["fields"]) != list:
@@ -439,7 +441,7 @@ class db:
 			status_code = self.valitable(table_fields)
 			if status_code != 200:
 				return self.returner(status_code)
-			os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + values["table_name"].lower())
+			os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/" + values["table_name"].lower())
 			to_write = []
 			for field in table_fields:
 				if type(field) == str:
@@ -546,9 +548,9 @@ class db:
 		field_names_nindex = []
 		field_names_index = []
 		fields = []
-		if os.path.exists("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
+		if os.path.exists("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
 			return self.returner(404)
-		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower())
+		os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower())
 		with open("config.NHX", "r+", newline='') as file:
 			reader = csv.reader(file, delimiter="|")
 			for index, row in enumerate(reader):
@@ -650,9 +652,9 @@ class db:
 			return self.returner(302)
 		if os.getcwd() != self.cwd:
 			os.chdir(self.cwd)
-		if os.path.exists("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
+		if os.path.exists("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
 			return self.returner(404)
-		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower())
+		os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower())
 		fields = []
 		with open("config.NHX", "r+", newline='') as file:
 			reader = csv.reader(file, delimiter="|")
@@ -937,9 +939,9 @@ class db:
 			return self.returner(304)
 		if type(table_name) != str or type(criteria) != str:
 			return self.returner(300)
-		if os.path.exists("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
+		if os.path.exists("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
 			return self.returner(404)
-		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower())
+		os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower())
 		fields = []
 		nindexread = []
 		indexread = []
@@ -1139,9 +1141,9 @@ class db:
 			return self.returner(304)
 		if type(table_name) != str or type(criteria) != str:
 			return self.returner(300)
-		if os.path.exists("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
+		if os.path.exists("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
 			return self.returner(404)
-		os.chdir("./NHX_DB_Dat/" + self.logged_DB + "/tables/" + table_name.lower())
+		os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower())
 		fields = []
 		nindexread = []
 		indexread = []
@@ -1349,14 +1351,3 @@ class db:
 				to_append.update(nindexlines[line])
 				tout.append(to_append)
 			return self.returner(tout)
-
-
-if __name__ == "__main__":
-	print("\n\n                     +++++++++++++++++++++++++++++++++++++++++++")
-	print("                             Welcome to the NHXDB Module\n")
-	print("                                     By NHXTech")
-	print("                           Written by Ch. Muhammad Sohaib")
-	print("        Since this is a module, it is designed to be used from another Python Script")
-	print(" Make Sure to run this module as Administrator or root otherwise it won't function correctly")
-	print("               Github Page: https://www.github.com/chmuhammadsohaib/NHXDB       ")
-	print("                     +++++++++++++++++++++++++++++++++++++++++++\n\n")

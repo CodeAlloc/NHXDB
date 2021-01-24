@@ -8,7 +8,7 @@ NHXDB is a lightweight Database which combines the SQL language with the ease of
 
 # Features currently supported
 
-  - _Loging in/Creating of Database_
+  - _Logging in/Creating of Database_
   - _Deleting a Database_
   - _Backing up of Database in its own archive format, .NHX_
   - _Restoring the Database via the same .NHX file_
