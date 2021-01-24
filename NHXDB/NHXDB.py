@@ -86,7 +86,7 @@ class db:
 			if code == 200:
 				return code
 			else:
-				print("NHXError (" + code + "): " + error[code] + ".")
+				print("NHXError (" + str(code) + "): " + error[code] + ".")
 				raise SystemExit
 				
 
