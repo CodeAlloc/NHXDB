@@ -121,7 +121,7 @@ class db:
 				field = literal_eval(field)
 			if "name" not in field or "type" not in field:
 				return self.returner(302)
-			if ("name" in field and type(field["name"]) != str) or ("type" in field and type(field["type"]) != str) or ("length" in field and type(field["length"]) != int) or ("ai" in field and type(field["ai"]) != bool) or ("null" in field and type(field["null"]) != bool) or ("default" in field and (type(field["default"]) != str) and (field["default"] != None)) or ("attribute" in field and ((type(field["attribute"]) != str) and (field["attribute"] != None))):
+			if ("name" in field and type(field["name"]) != str) or ("type" in field and type(field["type"]) != str) or ("length" in field and type(field["length"]) != int) or ("ai" in field and type(field["ai"]) != bool) or ("null" in field and type(field["null"]) != bool) or ("default" in field and ((field["type"] == "str" and type(field["default"]) != str) or (field["type"] == "int" and type(field["default"]) != int) or (field["type"] == "bool" and type(field["default"]) != bool) or (field["type"] == "float" and type(field["default"]) != float)) and (field["default"] != None)) or ("attribute" in field and ((type(field["attribute"]) != str) and (field["attribute"] != None))):
 				return self.returner(300)
 			if "name" not in field or "type" not in field: 
 				return self.returner(302)
