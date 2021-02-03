@@ -1,7 +1,7 @@
 import sys, os, csv, hashlib, shutil
 from ast import literal_eval
 
-class db:
+class database:
 
 	def __init__(self, verbose=False):
 		try:
@@ -12,24 +12,17 @@ class db:
 			else:
 				self.verbose = False
 			if sys.platform.lower().startswith("linux") or sys.platform.lower().startswith("darwin"):
-				os.chdir("/usr/local/share/")
-				if os.path.exists("NHX"):
-					os.chdir("NHX")
-				else:
-					os.mkdir("NHX")
-					os.chdir("NHX")
-				os.mkdir("cache")
-				shutil.rmtree("cache")
+				defaultwd = "/usr/local/share/"
 			elif sys.platform.lower().startswith("win32"): 
-				os.chdir("C:\\Users\\" + os.getlogin() + "\\AppData\\Local\\")
-				if os.path.exists("NHX"):
-					os.chdir("NHX")
-				else:
-					os.mkdir("NHX")
-					os.chdir("NHX")
-				os.mkdir("cache")
-				shutil.rmtree("cache")
-			self.cwd = os.getcwd()
+				defaultwd = "C:/Users/" + os.getlogin() + "/AppData/Local/"
+			if os.path.exists(defaultwd + "NHX") != True:
+				os.mkdir(defaultwd + "NHX")
+				os.mkdir(defaultwd + "NHX/NHXDB-Data")
+			elif os.path.exists(defaultwd + "NHX/NHXDB-Data") != True:
+				os.mkdir(defaultwd + "NHX/NHXDB-Data")
+			self.defaultwd = defaultwd + "NHX/NHXDB-Data/"
+			os.mkdir(self.defaultwd + "cache")
+			shutil.rmtree(self.defaultwd + "cache")
 			self.initialized = True
 			self.permissions = True
 			self.pop = False
@@ -46,7 +39,6 @@ class db:
 
 
 	def returner(self, code):
-		os.chdir(self.cwd)
 		if self.verbose == False:
 			return code
 		else:
@@ -90,7 +82,7 @@ class db:
 				raise SystemExit
 				
 
-	def validator(self, db_properties, no_cred=False):
+	def __validator(self, db_properties, no_cred=False):
 		self.db_properties = db_properties
 		if type(db_properties) != dict:
 			# Returns status code 300 = Invalid Entry
@@ -113,7 +105,165 @@ class db:
 		return self.returner(200)
 
 
-	def valitable(self, table_fields):
+	def create(self, db_properties):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
+		status_code = self.__validator(db_properties)
+		if status_code != 200:
+			return self.returner(status_code)
+		if os.path.exists(self.defaultwd + self.database_name) and os.path.isfile(self.defaultwd + self.database_name + "/config.NHX"):
+			# Returns status code 301 = Already Exists
+			return self.returner(301)
+		else:
+			os.mkdir(self.defaultwd + self.database_name)
+			with open(self.defaultwd + self.database_name + "/config.NHX", "w") as handler:
+				encoded = hashlib.sha256(self.database_usr.encode("utf-8") + self.database_pass.encode("utf-8")).hexdigest()
+				pass_encoded = hashlib.sha256(self.database_pass.encode("utf-8")).hexdigest()
+				handler.write(self.database_name + "|" + str(encoded) + "|" + str(pass_encoded))
+		# Returns status code 200 = Success
+		return self.returner(200)
+
+
+	def login(self, db_properties):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
+		self.status_code = self.__validator(db_properties)
+		if self.status_code != 200:
+			return self.returner(self.status_code)
+		# Verification Starts
+		if os.path.isfile(self.defaultwd + self.database_name + "/config.NHX") == False and os.path.exists(self.defaultwd + self.database_name + "/tables/") == False:
+			# Returns status code 404 = Not found
+			self.status_code = 404
+			return self.returner(404)
+		with open(self.defaultwd + self.database_name + "/config.NHX") as readf:
+			self.database_usr = self.database_usr
+			self.database_pass = self.database_pass
+			content = readf.read()
+			content = content.split("|")
+			verification = content[1]
+			post_verification = content[2]
+			verified = hashlib.sha256(self.database_usr.encode("utf-8") + self.database_pass.encode("utf-8")).hexdigest()
+			post_verified = hashlib.sha256(self.database_pass.encode("utf-8")).hexdigest()
+			if verification == verified and post_verification == post_verified:
+				self.logged_in = True
+				self.logged_DB = self.database_name
+				return self.returner(200)
+			else:
+				# Returns status code 303 = Credentials error
+				return self.returner(303)
+
+
+	def drop(self):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
+		if self.logged_in != True:
+			return self.returner(304)
+		shutil.rmtree(self.defaultwd + self.database_name)
+		self.logged_in = False
+		return self.returner(200)
+
+
+	def backup(self, path):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
+		if self.logged_in != True:
+			return self.returner(304)
+		if type(path) != str:
+			return self.returner(300)
+		shutil.make_archive(self.defaultwd + "cache/" + self.database_name, "zip", self.defaultwd + self.database_name)
+		file = open(self.defaultwd + "cache/" + self.database_name + ".zip", "r+b")
+		data = file.read()
+		file.close()
+		to_write = data[2:] + 64*b"\x4e\x48\x58"
+		file = open(path + self.database_name + ".NHX", "w+b")
+		file.write(to_write)
+		file.close()
+		os.remove(self.defaultwd + "cache/" + self.database_name + ".zip")
+		return self.returner(200)
+
+
+	def restore(self, db_properties):
+		if self.initialized != True:
+			# Returns status code 100 = Database System not Initialized Yet
+			return 100
+		status_code = self.__validator(db_properties)
+		if status_code != 200:
+			return self.returner(status_code)
+		if "file" not in db_properties:
+			return self.returner(302)
+		if type(db_properties["file"]) != str:
+			return self.returner(300)
+		if os.path.isfile(db_properties["file"]) != True:
+			return self.returner(404)
+		file = open(db_properties["file"], "r+b")
+		data = file.read()
+		file.close()
+		to_restore = b"PK" + data[:-192]
+		file = open(self.defaultwd + "cache.NHX", "w+b")
+		file.write(to_restore)
+		file.close()
+		os.mkdir(self.defaultwd + "cache.?.?.?NHX")
+		shutil.unpack_archive(self.defaultwd + "cache.NHX", self.defaultwd + "cache.?.?.?NHX/", "zip")
+		file = open(self.defaultwd + "cache.?.?.?NHX/config.NHX", "r")
+		content = file.read()
+		file.close()
+		content = content.split("|")
+		name = content[0]
+		os.remove(self.defaultwd + "cache.NHX")
+		verification = content[1]
+		post_verification = content[2]
+		verified = hashlib.sha256(self.database_usr.encode("utf-8") + self.database_pass.encode("utf-8")).hexdigest()
+		post_verified = hashlib.sha256(self.database_pass.encode("utf-8")).hexdigest()
+		if verification == verified and post_verification == post_verified:
+			os.rename(self.defaultwd + "cache.?.?.?NHX", name)
+			self.status_code = 200
+			return self.returner(200)
+		else:
+			shutil.rmtree(self.defaultwd + "cache.?.?.?NHX")
+			self.status_code = 303
+			return self.returner(303)
+
+
+class table(database):
+
+
+	def __init__(self, table_name):
+		super().__init__()
+		if type(table_name) != str:
+			return self.returner(300)
+		if self.initialized != True:
+			return 100
+		if self.logged_in != True:
+			return self.returner(304)
+		if os.path.exists(self.defaultwd + self.logged_DB + "/tables/" + table_name.lower()) == False:
+			self.__tablexists = False
+		else:
+			self.__tablexists = True
+		fields = []
+		with open(self.defaultwd + self.logged_DB + "/tables/" + table_name.lower() + "/config.NHX", "r+", newline='') as file:
+			reader = csv.reader(file, delimiter="|")
+			for index, row in enumerate(reader):
+				if index == 0:
+					self.fields = row
+					break
+		for field in fields:
+			field = literal_eval(field)
+			if field["attribute"] != None:
+				indexread.append(field["name"].lower())
+		indexlines = []
+		with open(self.defaultwd + self.logged_DB + "/tables/" + table_name.lower() + "/index.NHX", "r+", newline="") as file:
+			reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
+			for row in reader:
+				indexlines.append(row)
+		self.indexdata = indexlines
+		self.table_name = table_name
+
+
+	def __valitable(self, table_fields):
 		primaryy = False
 		field_names = []
 		for field in table_fields:
@@ -156,172 +306,28 @@ class db:
 		return self.returner(200)
 
 
-	def create(self, db_properties):
+	def create(self, structure, override=False):
 		if self.initialized != True:
 			# Returns status code 100 = Database System not Initialized Yet
 			return 100
-		status_code = self.validator(db_properties)
-		dir_exists = os.path.exists("./NHXDB-Data/")
-		if dir_exists:
-			os.chdir("./NHXDB-Data")
-		else:
-			os.mkdir("./NHXDB-Data")
-			os.chdir("./NHXDB-Data")
-		if status_code != 200:
-			return self.returner(status_code)
-		if os.path.exists(self.database_name) and os.path.isfile(self.database_name + "/config.NHX"):
-			# Returns status code 301 = Already Exists
+		if self.logged_in != True:
+			return self.returner(304)
+		if type(structure) != list:
+			return self.returner(300)
+		no_field = len(structure)
+		if os.path.exists(self.defaultwd + self.database_name + "/tables/") == False:
+			os.mkdir(self.defaultwd + self.database_name + "/tables/")
+		if os.path.exists(self.defaultwd + self.database_name + "/tables/" + self.table_name) and os.path.isfile(self.defaultwd + self.database_name + "/tables/" + self.table_name + "/config.NHX"):
 			return self.returner(301)
-		else:
-			os.mkdir(self.database_name)
-			os.chdir(self.database_name)
-			with open("config.NHX", "w") as handler:
-				encoded = hashlib.sha256(self.database_usr.encode("utf-8") + self.database_pass.encode("utf-8")).hexdigest()
-				pass_encoded = hashlib.sha256(self.database_pass.encode("utf-8")).hexdigest()
-				handler.write(self.database_name + "|" + str(encoded) + "|" + str(pass_encoded))
-		# Returns status code 200 = Success
-		return self.returner(200)
-
-
-	def login(self, db_properties):
-		if self.initialized != True:
-			# Returns status code 100 = Database System not Initialized Yet
-			return 100
-		self.status_code = self.validator(db_properties)
-		if self.status_code != 200:
-			return self.returner(self.status_code)
-		# Verification Starts
-		if os.path.isfile("./NHXDB-Data/" + self.database_name + "/config.NHX") == False and os.path.exists("./NHXDB-Data/" + self.database_name + "/tables/") == False:
-			# Returns status code 404 = Not found
-			self.status_code = 404
-			return self.returner(404)
-		with open("./NHXDB-Data/" + self.database_name + "/config.NHX") as readf:
-			self.database_usr = self.database_usr
-			self.database_pass = self.database_pass
-			content = readf.read()
-			content = content.split("|")
-			verification = content[1]
-			post_verification = content[2]
-			verified = hashlib.sha256(self.database_usr.encode("utf-8") + self.database_pass.encode("utf-8")).hexdigest()
-			post_verified = hashlib.sha256(self.database_pass.encode("utf-8")).hexdigest()
-			if verification == verified and post_verification == post_verified:
-				self.logged_in = True
-				self.logged_DB = self.database_name
-				return self.returner(200)
-			else:
-				# Returns status code 303 = Credentials error
-				return self.returner(303)
-
-
-	def drop(self):
-		if self.initialized != True:
-			# Returns status code 100 = Database System not Initialized Yet
-			return 100
-		if self.logged_in != True:
-			return self.returner(304)
-		os.chdir("./NHXDB-Data/")
-		shutil.rmtree(self.database_name)
-		self.logged_in = False
-		return self.returner(200)
-
-
-	def backup(self, path):
-		if self.initialized != True:
-			# Returns status code 100 = Database System not Initialized Yet
-			return 100
-		if self.logged_in != True:
-			return self.returner(304)
-		if type(path) != str:
-			return self.returner(300)
-		shutil.make_archive("./NHXDB-Data/cache" + self.database_name, "zip", "./NHXDB-Data/"+ self.database_name)
-		file = open("./NHXDB-Data/cache" + self.database_name + ".zip", "r+b")
-		data = file.read()
-		file.close()
-		to_write = data[2:] + 64*b"\x4e\x48\x58"
-		file = open(path + self.database_name + ".NHX", "w+b")
-		file.write(to_write)
-		file.close()
-		os.remove("./NHXDB-Data/cache" + self.database_name + ".zip")
-		return self.returner(200)
-
-
-	def restore(self, db_properties):
-		if self.initialized != True:
-			# Returns status code 100 = Database System not Initialized Yet
-			return 100
-		status_code = self.validator(db_properties)
+		if os.path.exists(self.defaultwd + self.database_name + "/tables/" + self.table_name) == False:
+			os.mkdir(self.table_name)
+		status_code = self.__valitable(structure)
 		if status_code != 200:
 			return self.returner(status_code)
-		dir_exists = os.path.exists("./NHXDB-Data/")
-		if dir_exists:
-			os.chdir("./NHXDB-Data")
-		else:
-			os.mkdir("./NHXDB-Data")
-			os.chdir("./NHXDB-Data")
-		if "file" not in db_properties:
-			return self.returner(302)
-		if type(db_properties["file"]) != str:
-			return self.returner(300)
-		if os.path.isfile(db_properties["file"]) != True:
-			return self.returner(404)
-		file = open(db_properties["file"], "r+b")
-		data = file.read()
-		file.close()
-		to_restore = b"PK" + data[:-192]
-		file = open("./cache.NHX", "w+b")
-		file.write(to_restore)
-		file.close()
-		os.mkdir("./cache.?.?.?NHX")
-		shutil.unpack_archive("cache.NHX", "./cache.?.?.?NHX/", "zip")
-		file = open("./cache.?.?.?NHX/config.NHX", "r")
-		content = file.read()
-		file.close()
-		content = content.split("|")
-		name = content[0]
-		os.remove("cache.NHX")
-		verification = content[1]
-		post_verification = content[2]
-		verified = hashlib.sha256(self.database_usr.encode("utf-8") + self.database_pass.encode("utf-8")).hexdigest()
-		post_verified = hashlib.sha256(self.database_pass.encode("utf-8")).hexdigest()
-		if verification == verified and post_verification == post_verified:
-			os.rename("./cache.?.?.?NHX", name)
-			self.status_code = 200
-			return self.returner(200)
-		else:
-			shutil.rmtree("./cache.?.?.?NHX")
-			self.status_code = 303
-			return self.returner(303)
-
-
-	def create_table(self, structure, override=False):
-		if self.initialized != True:
-			# Returns status code 100 = Database System not Initialized Yet
-			return 100
-		if self.logged_in != True:
-			return self.returner(304)
-		if "fields" not in structure or "name" not in structure:
-			return self.returner(302)
-		if type(structure) != dict or type(structure["fields"]) != list or type(structure["name"]) != str:
-			return self.returner(300)
-		no_field = len(structure["fields"])
-		table_name = structure["name"].lower()
-		os.chdir("./NHXDB-Data")
-		if os.path.exists("./" + self.database_name + "/tables/") == False:
-			os.mkdir("./" + self.database_name + "/tables/")
-		os.chdir("./" + self.database_name + "/tables/")
-		if os.path.exists("./" + table_name) and os.path.isfile("./" + table_name + "/config.NHX"):
-			return self.returner(301)
-		if os.path.exists("./" + table_name) == False:
-			os.mkdir(table_name)
-		os.chdir(table_name)
-		status_code = self.valitable(structure["fields"])
-		if status_code != 200:
-			return self.returner(status_code)
-		os.chdir("./NHXDB-Data/" + self.database_name + "/tables/" + table_name)
 		to_write = []
 		to_write_index = []
 		to_write_data = []
-		for field in structure["fields"]:
+		for field in structure:
 			buff = {"name": field["name"].lower(), "type": field["type"]}
 			if "length" in field and type(field["length"]) == int and ((field["type"].lower() == "int" and field["length"] < 256) or field["type"].lower() == "str" and field["length"] < 16385):
 				buff.update({"length": field["length"]})
@@ -357,74 +363,69 @@ class db:
 			else:
 				to_write_data.append(buff["name"].lower())
 			to_write.append(buff)
-		with open("config.NHX", "w+", newline='') as file:
+		with open(self.defaultwd + self.database_name + "/tables/" + self.table_name + "/config.NHX", "w+", newline='') as file:
 			writer = csv.writer(file, delimiter="|")
 			writer.writerow(to_write)
-		if (os.path.isfile("nindex.NHX") == True or os.path.isfile("index.NHX")) and override == False:
+		if (os.path.isfile(self.defaultwd + self.database_name + "/tables/" + self.table_name + "/nindex.NHX") == True or os.path.isfile(self.defaultwd + self.database_name + "/tables/" + self.table_name + "/index.NHX")) and override == False:
 			# Returns status code 500 = Data file for the current table exists
 			return self.returner(500)
-		with open("index.NHX", "w+", newline='') as file:
+		with open(self.defaultwd + self.database_name + "/tables/" + self.table_name + "/index.NHX", "w+", newline='') as file:
 			pass
-		if os.path.isfile("nindex.NHX") == True and override == False:
+		if os.path.isfile(self.defaultwd + self.database_name + "/tables/" + self.table_name + "/nindex.NHX") == True and override == False:
 			# Returns status code 500 = Data file for the current table exists
 			return self.returner(500)
-		with open("nindex.NHX", "w+", newline='') as file:
+		with open(self.defaultwd + self.database_name + "/tables/" + self.table_name + "/nindex.NHX", "w+", newline='') as file:
 			pass
 		return self.returner(200)
 
 
-	def drop_table(self, table_name):
+	def drop(self):
 		if self.initialized != True:
 			# Returns status code 100 = Database System not Initialized Yet
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
-		if type(table_name) != str:
-			return self.returner(300)
-		os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/")
-		if os.path.exists(table_name.lower()) != True:
+		if self.__tablexists == False:
 			return self.returner(404)
-		shutil.rmtree(table_name.lower())
+		shutil.rmtree(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower())
+		self.fields = []
+		self.indexdata = []
+		self.__tablexists = False
 		return self.returner(200)
 
 
-	def truncate_table(self, table_name):
+	def truncate(self):
 		if self.initialized != True:
 			# Returns status code 100 = Database System not Initialized Yet
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
-		if type(table_name) != str:
-			return self.returner(300)
-		os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/")
-		if os.path.exists(table_name.lower()) != True:
+		if self.__tablexists == False:
 			return self.returner(404)
-		os.chdir(table_name.lower())
 		head = []
-		with open("nindex.NHX", "w") as file:
+		with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "w") as file:
 			pass
-		with open("index.NHX", "w") as file:
+		with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "w") as file:
 			pass
+		self.indexdata = []
 		return self.returner(200)
 	
 
-	def alter_table(self, values):
+	def alter(self, values):
 		if self.initialized != True:
 			# Returns status code 100 = Database System not Initialized Yet
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
-		os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/")
-		if "fields" not in values or "table_name" not in values or "operation" not in values:
+		if "fields" not in values or "operation" not in values:
 			return self.returner(302)
-		if type(values) != dict or type(values["table_name"]) != str or type(values["operation"]) != str or type(values["fields"]) != list:
+		if type(values) != dict or type(values["operation"]) != str or type(values["fields"]) != list:
 			return self.returner(300)
-		if os.path.exists(values["table_name"].lower()) != True:
+		if self.__tablexists == False:
 			return self.returner(404)
-		os.chdir(values["table_name"].lower())
 		if values["operation"].lower() == "add":
 			cfields = []
-			with open("config.NHX", "r+") as file:
+			with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/config.NHX", "r+") as file:
 				reader = csv.reader(file, delimiter="|")
 				for index, row in enumerate(reader):
 					if index == 0:
@@ -438,10 +439,9 @@ class db:
 				if ("name" in field and type(field["name"]) != str) or ("type" in field and type(field["type"]) != str) or ("length" in field and type(field["length"]) != int) or ("ai" in field and type(field["ai"]) != bool) or ("null" in field and type(field["null"]) != bool) or ("default" in field and type(field["default"]) != str) or ("attribute" in field and type(field["attribute"]) != str):
 					return self.returner(300)
 			table_fields = cfields + values["fields"]
-			status_code = self.valitable(table_fields)
+			status_code = self.__valitable(table_fields)
 			if status_code != 200:
 				return self.returner(status_code)
-			os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/" + values["table_name"].lower())
 			to_write = []
 			for field in table_fields:
 				if type(field) == str:
@@ -477,9 +477,10 @@ class db:
 				else:
 					buff.update({"attribute": None})
 				to_write.append(buff)
-			with open("config.NHX", "w+", newline='') as file:
+			with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/config.NHX", "w+", newline='') as file:
 				writer = csv.writer(file, delimiter="|")
 				writer.writerow(to_write)
+			self.fields = to_write
 			to_update = {}
 			for field in values["fields"]:
 				data = None
@@ -495,7 +496,7 @@ class db:
 				else:
 					data = field["default"]
 				to_update.update({field["name"]: data})
-			status = self.update_data(values["table_name"], {
+			status = self.update(self.table_name, {
 				"fields": to_update,
 				"criteria": "*"	})
 			if status != 200:
@@ -507,17 +508,15 @@ class db:
 			for field in values["fields"]:
 				if type(field) != str:
 					return self.returner(300)
-			initial_dir = os.getcwd()
 			to_edit = {}
 			for field in values["fields"]:
 				to_edit.update({field: None})
 			self.pop = True
-			status_code = self.update_data(values["table_name"], {"fields": to_edit, "criteria": "*"})
+			status_code = self.update(self.table_name, {"fields": to_edit, "criteria": "*"})
 			self.pop = False
 			if status_code != 200:
 				return self.returner(status_code)
-			os.chdir(initial_dir)
-			with open("config.NHX", "r+", newline="") as file:
+			with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/config.NHX", "r+", newline="") as file:
 				reader = csv.reader(file, delimiter="|")
 				for index, row in enumerate(reader):
 					if index == 0:
@@ -528,38 +527,31 @@ class db:
 					pass
 				else:
 					to_update.append(field)
-			with open("config.NHX", "w+", newline='') as file:
+			with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/config.NHX", "w+", newline='') as file:
 				writer = csv.writer(file, delimiter='|')
 				writer.writerow(to_update)
+			self.fields = to_update
 		else:
 			# Returns status code 509 = Unsupported Operation
 			return self.returner(509)
 		return self.returner(200)
 
 
-	def insert_data(self, table_name, values):
+	def insert(self, values):
 		if self.initialized != True:
 			# Returns status code 100 = Database System not Initialized Yet
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
-		if type(table_name) != str or type(values) != dict:
+		if type(values) != dict:
 			return self.returner(300)
 		field_names_nindex = []
 		field_names_index = []
-		fields = []
-		if os.path.exists("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
+		if self.__tablexists == False:
 			return self.returner(404)
-		os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower())
-		with open("config.NHX", "r+", newline='') as file:
-			reader = csv.reader(file, delimiter="|")
-			for index, row in enumerate(reader):
-				if index == 0:
-					fields = row
-					break
 		nindexread = []
 		indexread = []
-		for field in fields:
+		for field in self.fields:
 			field = literal_eval(field)
 			if field["attribute"] != None:
 				indexread.append(field["name"].lower())
@@ -567,7 +559,7 @@ class db:
 				nindexread.append(field["name"].lower())
 		indexvalues = {}
 		nindexvalues = {}
-		for field in fields:
+		for field in self.fields:
 			field = literal_eval(field)
 			if field["ai"] != True:
 				if ((field["name"].lower() not in values and field["null"] != True) or (values[field["name"].lower()] == "")) and (field["ai"] == False and field["default"] == None):
@@ -585,7 +577,7 @@ class db:
 				if field["attribute"] != None:
 					indexvalues.update({field["name"].lower(): values[field["name"]]})
 					if field["attribute"].lower() == "unique" or field["attribute"].lower() == "primary":
-						file = open("index.NHX", "r+", newline='')
+						file = open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "r+", newline='')
 						reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
 						flagged = False
 						for row in reader:
@@ -607,8 +599,8 @@ class db:
 				if field["attribute"] == None and field["ai"] != True:
 					nindexvalues.update({field["name"]: ""})
 				if field["attribute"] != None and field["ai"] == True:
-					if os.path.getsize("index.NHX") != 0:
-						with open("index.NHX", "r+") as file:
+					if os.path.getsize(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX") != 0:
+						with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "r+") as file:
 							data = file.read().splitlines()[-1]
 						data = data.split("|")
 						index_no = indexread.index(field["name"].lower())
@@ -617,8 +609,8 @@ class db:
 					else:
 						indexvalues.update({field["name"].lower(): 0})
 				if field["attribute"] == None and field["ai"] == True:
-					if os.path.getsize("nindex.NHX") != 0:
-						with open("nindex.NHX", "r+") as file:
+					if os.path.getsize(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX") != 0:
+						with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "r+") as file:
 							data = file.read().splitlines()[-1]
 						data = data.split("|")
 						index_no = nindexread.index(field["name"].lower())
@@ -629,45 +621,36 @@ class db:
 				if field["attribute"] == "primary" or field["attribute"] == "index":
 					# Returns status code 604 = Primary and Index fields cannot contain be empty
 					return self.returner(604)
-		indexed = open("index.NHX", "a+", newline="")
-		nindexed = open("nindex.NHX", "a+", newline="")
+		indexed = open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "a+", newline="")
+		nindexed = open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "a+", newline="")
 		indexwrite = csv.DictWriter(indexed, delimiter="|", fieldnames=indexread)
 		nindexwrite = csv.DictWriter(nindexed, delimiter="|", fieldnames=nindexread)
 		nindexwrite.writerow(nindexvalues)
 		indexwrite.writerow(indexvalues)
 		nindexed.close()
 		indexed.close()
+		self.indexdata.append(indexvalues)
 		return self.returner(200)
 
 
-	def update_data(self, table_name, values):
+	def update(self, values):
 		if self.initialized != True:
 			# Returns status code 100 = Database System not Initialized Yet
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
-		if type(table_name) != str or type(values) != dict:
+		if type(values) != dict:
 			return self.returner(300)
 		if "fields" not in values or "criteria" not in values:
 			return self.returner(302)
-		if os.getcwd() != self.cwd:
-			os.chdir(self.cwd)
-		if os.path.exists("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
+		if self.__tablexists == False:
 			return self.returner(404)
-		os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower())
-		fields = []
-		with open("config.NHX", "r+", newline='') as file:
-			reader = csv.reader(file, delimiter="|")
-			for index, row in enumerate(reader):
-				if index == 0:
-					fields = row
-					break
 		nindexread = []
 		indexread = []
 		to_alter = []
 		for field_name in values["fields"]:
 			to_alter.append(field_name)
-		for field in fields:
+		for field in self.fields:
 			field = literal_eval(field)
 			if field["attribute"] != None:
 				indexread.append(field["name"].lower())
@@ -675,7 +658,7 @@ class db:
 				nindexread.append(field["name"].lower())
 		flagged = True
 		if values["criteria"] == "*":
-			for field in fields:
+			for field in self.fields:
 				field = literal_eval(field)
 				if field["name"] in to_alter:
 					if self.pop != True:
@@ -690,7 +673,7 @@ class db:
 					flagged = False
 					to_up = []
 					if field["attribute"] != None:
-						with open("index.NHX", "r+", newline='') as file:
+						with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "r+", newline='') as file:
 							reader = csv.DictReader(file, fieldnames=indexread, delimiter="|")
 							for index, row in enumerate(reader):
 								if self.pop and field["name"] in values["fields"]:
@@ -699,14 +682,14 @@ class db:
 								else:
 									row.update({field["name"] : values["fields"][field["name"]]})
 									to_up.append(row)
-						with open("index.NHX", "w+", newline='') as file:
+						with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "w+", newline='') as file:
 							if self.pop:
 								indexread.remove(field["name"])
 							writer = csv.DictWriter(file, fieldnames=indexread, delimiter="|")
 							for index, row in enumerate(to_up):
 								writer.writerow(row)
 					else:
-						with open("nindex.NHX", "r+", newline='') as file:
+						with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "r+", newline='') as file:
 							reader = csv.DictReader(file, fieldnames=nindexread, delimiter="|")
 							for index, row in enumerate(reader):
 								if self.pop and field["name"] in values["fields"]:
@@ -715,7 +698,7 @@ class db:
 								else:
 									row.update({field["name"] : values["fields"][field["name"]]})
 									to_up.append(row)
-						with open("nindex.NHX", "w+", newline='') as file:
+						with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "w+", newline='') as file:
 							if self.pop:
 								nindexread.remove(field["name"])
 							writer = csv.DictWriter(file, fieldnames=nindexread, delimiter="|")
@@ -759,7 +742,7 @@ class db:
 				return self.returner(607)
 			results = False
 			crit = {}
-			for fieldaa in fields:
+			for fieldaa in self.fields:
 				fieldaa = literal_eval(fieldaa)
 				if fieldaa["name"] == operands[left]:
 					results = True
@@ -777,7 +760,7 @@ class db:
 			line_no = []
 			if field["attribute"] != None:
 				if crit["is_index"]:
-					with open("index.NHX", "r+", newline='') as file:
+					with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "r+", newline='') as file:
 						reader = csv.DictReader(file, fieldnames=indexread, delimiter="|")
 						for index, row in enumerate(reader):
 							if crit["type"] == "==":
@@ -801,7 +784,7 @@ class db:
 							else:
 								line_no = False
 				else:
-					with open("nindex.NHX", "r+", newline='') as file:
+					with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "r+", newline='') as file:
 						reader = csv.DictReader(file, fieldnames=nindexread, delimiter="|")
 						for index, row in enumerate(reader):
 							if crit["type"] == "==":
@@ -829,7 +812,7 @@ class db:
 					return self.returner(700)
 			else:
 				if crit["is_index"]:
-					with open("index.NHX", "r+", newline='') as file:
+					with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "r+", newline='') as file:
 						reader = csv.DictReader(file, fieldnames=indexread, delimiter="|")
 						for index, row in enumerate(reader):
 							if crit["type"] == "==":
@@ -853,7 +836,7 @@ class db:
 							else:
 								line_no = False
 				else:
-					with open("nindex.NHX", "r+", newline='') as file:
+					with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "r+", newline='') as file:
 						reader = csv.DictReader(file, fieldnames=nindexread, delimiter="|")
 						for index, row in enumerate(reader):
 							if crit["type"] == "==":
@@ -881,7 +864,7 @@ class db:
 			for field in values["fields"]:
 				nindexlines = []
 				indexlines = []
-				for fieldx in fields:
+				for fieldx in self.fields:
 					fieldx = literal_eval(fieldx)
 					if field == fieldx["name"]:
 						if (fieldx["attribute"] != None and(fieldx["attribute"] == "primary" or fieldx["attribute"] == "index")) and (values["fields"][field] == "" or values["fields"][field] == None):
@@ -894,7 +877,7 @@ class db:
 							return self.returner(601)
 						flag = False
 						if fieldx["attribute"] == "unique" or fieldx["attribute"] == "primary":
-							file = open("index.NHX", "r+", newline='')
+							file = open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "r+", newline='')
 							reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
 							flagged = False
 							for row in reader:
@@ -905,24 +888,25 @@ class db:
 								return self.returner(603)
 						break
 				if field in indexread:
-					with open("index.NHX", "r+", newline="") as file:
+					with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "r+", newline="") as file:
 						reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
 						for row in reader:
 							indexlines.append(row)
 					for line in line_no:
 						indexlines[line].update({field: values["fields"][field]})
-					with open("index.NHX", "w+", newline='') as file:
+					with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "w+", newline='') as file:
 						writer = csv.DictWriter(file, delimiter="|", fieldnames=indexread)
 						for line in indexlines:
 							writer.writerow(line)
+				self.indexdata = indexlines
 				if field in nindexread:
-					with open("nindex.NHX", "r+", newline="") as file:
+					with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "r+", newline="") as file:
 						reader = csv.DictReader(file, delimiter="|", fieldnames=nindexread)
 						for row in reader:
 							nindexlines.append(row)
 					for line in line_no:
 						nindexlines[line].update({field: values["fields"][field]})
-					with open("nindex.NHX", "w+", newline='') as file:
+					with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "w+", newline='') as file:
 						writer = csv.DictWriter(file, delimiter="|", fieldnames=nindexread)
 						for line in nindexlines:
 							writer.writerow(line)
@@ -931,27 +915,19 @@ class db:
 		return self.returner(200)
 
 
-	def delete_data(self, table_name, criteria):
+	def delete(self, criteria):
 		if self.initialized != True:
 			# Returns status code 100 = Database System not Initialized Yet
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
-		if type(table_name) != str or type(criteria) != str:
+		if type(criteria) != str:
 			return self.returner(300)
-		if os.path.exists("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
+		if os.path.exists(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower()) == False:
 			return self.returner(404)
-		os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower())
-		fields = []
 		nindexread = []
 		indexread = []
-		with open("config.NHX", "r+", newline='') as file:
-			reader = csv.reader(file, delimiter="|")
-			for index, row in enumerate(reader):
-				if index == 0:
-					fields = row
-					break
-		for field in fields:
+		for field in self.fields:
 			field = literal_eval(field)
 			if field["attribute"] != None:
 				indexread.append(field["name"])
@@ -990,7 +966,7 @@ class db:
 			return self.returner(607)
 		crit = {}
 		results = False
-		for fieldaa in fields:
+		for fieldaa in self.fields:
 			fieldaa = literal_eval(fieldaa)
 			if fieldaa["name"] == operands[left].lower():
 				results = True
@@ -1006,7 +982,7 @@ class db:
 		line_no = []
 		if field["attribute"] != None:
 			if crit["is_index"]:
-				with open("index.NHX", "r+", newline='') as file:
+				with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "r+", newline='') as file:
 					reader = csv.DictReader(file, fieldnames=indexread, delimiter="|")
 					for index, row in enumerate(reader):
 						if crit["type"] == "==":
@@ -1030,7 +1006,7 @@ class db:
 						else:
 							line_no = False
 			else:
-				with open("nindex.NHX", "r+", newline='') as file:
+				with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "r+", newline='') as file:
 					reader = csv.DictReader(file, fieldnames=nindexread, delimiter="|")
 					for index, row in enumerate(reader):
 						if crit["type"] == "==":
@@ -1058,7 +1034,7 @@ class db:
 				return self.returner(700)
 		else:
 			if crit["is_index"]:
-				with open("index.NHX", "r+", newline='') as file:
+				with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "r+", newline='') as file:
 					reader = csv.DictReader(file, fieldnames=indexread, delimiter="|")
 					for index, row in enumerate(reader):
 						if crit["type"] == "==":
@@ -1082,7 +1058,7 @@ class db:
 						else:
 							line_no = False
 			else:
-				with open("nindex.NHX", "r+", newline='') as file:
+				with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "r+", newline='') as file:
 					reader = csv.DictReader(file, fieldnames=nindexread, delimiter="|")
 					for index, row in enumerate(reader):
 						if crit["type"] == "==":
@@ -1109,11 +1085,11 @@ class db:
 				return self.returner(700)
 		nindexlines = []
 		indexlines = []
-		with open("index.NHX", "r+", newline="") as file:
+		with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "r+", newline="") as file:
 			reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
 			for row in reader:
 				indexlines.append(row)
-		with open("nindex.NHX", "r+", newline="") as file:
+		with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "r+", newline="") as file:
 			reader = csv.DictReader(file, delimiter="|", fieldnames=nindexread)
 			for row in reader:
 				nindexlines.append(row)
@@ -1122,38 +1098,31 @@ class db:
 			nindexlines.pop(line - count)
 			indexlines.pop(line - count)
 			count = count + 1
-		with open("index.NHX", "w+", newline="") as file:
+		with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "w+", newline="") as file:
 			writer = csv.DictWriter(file, delimiter="|", fieldnames=indexread)
 			for row in indexlines:
 				writer.writerow(row)
-		with open("nindex.NHX", "w+", newline="") as file:
+		self.indexdata = indexlines
+		with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "w+", newline="") as file:
 			writer = csv.DictWriter(file, delimiter="|", fieldnames=nindexread)
 			for row in nindexlines:
 				writer.writerow(row)
 		return self.returner(200)
 
 
-	def select_data(self, table_name, criteria):
+	def select(self, criteria):
 		if self.initialized != True:
 			# Returns status code 100 = Database System not Initialized Yet
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
-		if type(table_name) != str or type(criteria) != str:
+		if type(criteria) != str:
 			return self.returner(300)
-		if os.path.exists("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower()) == False:
+		if os.path.exists(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower()) == False:
 			return self.returner(404)
-		os.chdir("./NHXDB-Data/" + self.logged_DB + "/tables/" + table_name.lower())
-		fields = []
 		nindexread = []
 		indexread = []
-		with open("config.NHX", "r+", newline='') as file:
-			reader = csv.reader(file, delimiter="|")
-			for index, row in enumerate(reader):
-				if index == 0:
-					fields = row
-					break
-		for field in fields:
+		for field in self.fields:
 			field = literal_eval(field)
 			if field["attribute"] != None:
 				indexread.append(field["name"].lower())
@@ -1161,12 +1130,8 @@ class db:
 				nindexread.append(field["name"].lower())
 		if criteria == "*":
 			nindexlines = []
-			indexlines = []
-			with open("index.NHX", "r+", newline="") as file:
-				reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
-				for row in reader:
-					indexlines.append(row)
-			with open("nindex.NHX", "r+", newline="") as file:
+			indexlines = self.indexdata
+			with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "r+", newline="") as file:
 				reader = csv.DictReader(file, delimiter="|", fieldnames=nindexread)
 				for row in reader:
 					nindexlines.append(row)
@@ -1179,7 +1144,7 @@ class db:
 				indexlines[0]
 			except IndexError:
 				return self.returner(nindexlines)
-			for index, row in enumerate(indexlines):
+			for row in indexlines:
 				row.update(nindexlines[index])
 				tout.append(row)
 			return self.returner(tout)
@@ -1217,7 +1182,7 @@ class db:
 				return self.returner(607)
 			crit = {}
 			results = False
-			for fieldaa in fields:
+			for fieldaa in self.fields:
 				fieldaa = literal_eval(fieldaa)
 				if fieldaa["name"] == operands[left].lower():
 					results = True
@@ -1233,31 +1198,29 @@ class db:
 			line_no = []
 			if field["attribute"] != None:
 				if crit["is_index"]:
-					with open("index.NHX", "r+", newline='') as file:
-						reader = csv.DictReader(file, fieldnames=indexread, delimiter="|")
-						for index, row in enumerate(reader):
-							if crit["type"] == "==":
-								if row[crit["name"]] == crit["value"]:
-									line_no.append(index)
-							elif crit["type"] == "!=":
-								if row[crit["name"]] != crit["value"]:
-									line_no.append(index)
-							elif crit["type"] == ">=":
-								if row[crit["name"]] >= crit["value"]:
-									line_no.append(index)
-							elif crit["type"] == "<=":
-								if row[crit["name"]] <= crit["value"]:
-									line_no.append(index)
-							elif crit["type"] == ">":
-								if row[crit["name"]] > crit["value"]:
-									line_no.append(index)
-							elif crit["type"] == "<":
-								if row[crit["name"]] < crit["value"]:
-									line_no.append(index)
-							else:
-								line_no = False
+					for index, row in enumerate(self.indexdata):
+						if crit["type"] == "==":
+							if row[crit["name"]] == crit["value"]:
+								line_no.append(index)
+						elif crit["type"] == "!=":
+							if row[crit["name"]] != crit["value"]:
+								line_no.append(index)
+						elif crit["type"] == ">=":
+							if row[crit["name"]] >= crit["value"]:
+								line_no.append(index)
+						elif crit["type"] == "<=":
+							if row[crit["name"]] <= crit["value"]:
+								line_no.append(index)
+						elif crit["type"] == ">":
+							if row[crit["name"]] > crit["value"]:
+								line_no.append(index)
+						elif crit["type"] == "<":
+							if row[crit["name"]] < crit["value"]:
+								line_no.append(index)
+						else:
+							line_no = False
 				else:
-					with open("nindex.NHX", "r+", newline='') as file:
+					with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "r+", newline='') as file:
 						reader = csv.DictReader(file, fieldnames=nindexread, delimiter="|")
 						for index, row in enumerate(reader):
 							if crit["type"] == "==":
@@ -1285,31 +1248,29 @@ class db:
 					return self.returner(700)
 			else:
 				if crit["is_index"]:
-					with open("index.NHX", "r+", newline='') as file:
-						reader = csv.DictReader(file, fieldnames=indexread, delimiter="|")
-						for index, row in enumerate(reader):
-							if crit["type"] == "==":
-								if row[crit["name"]] == crit["value"]:
-									line_no.append(index)
-							elif crit["type"] == "!=":
-								if row[crit["name"]] != crit["value"]:
-									line_no.append(index)
-							elif crit["type"] == ">=":
-								if row[crit["name"]] >= crit["value"]:
-									line_no.append(index)
-							elif crit["type"] == "<=":
-								if row[crit["name"]] <= crit["value"]:
-									line_no.append(index)
-							elif crit["type"] == ">":
-								if row[crit["name"]] > crit["value"]:
-									line_no.append(index)
-							elif crit["type"] == "<":
-								if row[crit["name"]] < crit["value"]:
-									line_no.append(index)
-							else:
-								line_no = False
+					for index, row in enumerate(self.indexdata):
+						if crit["type"] == "==":
+							if row[crit["name"]] == crit["value"]:
+								line_no.append(index)
+						elif crit["type"] == "!=":
+							if row[crit["name"]] != crit["value"]:
+								line_no.append(index)
+						elif crit["type"] == ">=":
+							if row[crit["name"]] >= crit["value"]:
+								line_no.append(index)
+						elif crit["type"] == "<=":
+							if row[crit["name"]] <= crit["value"]:
+								line_no.append(index)
+						elif crit["type"] == ">":
+							if row[crit["name"]] > crit["value"]:
+								line_no.append(index)
+						elif crit["type"] == "<":
+							if row[crit["name"]] < crit["value"]:
+								line_no.append(index)
+						else:
+							line_no = False
 				else:
-					with open("nindex.NHX", "r+", newline='') as file:
+					with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "r+", newline='') as file:
 						reader = csv.DictReader(file, fieldnames=nindexread, delimiter="|")
 						for index, row in enumerate(reader):
 							if crit["type"] == "==":
@@ -1335,12 +1296,8 @@ class db:
 				if line_no == False:
 					return self.returner(700)
 			nindexlines = []
-			indexlines = []
-			with open("index.NHX", "r+", newline="") as file:
-				reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
-				for row in reader:
-					indexlines.append(row)
-			with open("nindex.NHX", "r+", newline="") as file:
+			indexlines = self.indexdata
+			with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "r+", newline="") as file:
 				reader = csv.DictReader(file, delimiter="|", fieldnames=nindexread)
 				for row in reader:
 					nindexlines.append(row)

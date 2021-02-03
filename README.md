@@ -1,13 +1,8 @@
 # NHXDB
 
 NHXDB is a lightweight Database which combines the SQL language with the ease of ORM syntax
-# Update v1.2.2
-- ##### Major Bug Fixes; Quality improvement
-- ##### Added Default values for updating (add) a field, for the previous stored rows containing no data of the added field
-- ##### Added .isPermitted() function to check permissions
-- ##### Restructure of Storage settings and change of data storage locations
-- ##### Verbosity mode added as a better support for development
-
+# Update v1.2.3
+- ##### Performance Improvements and bug fixes
 # Features currently supported
 
   - _Logging in/Creating of Database_
