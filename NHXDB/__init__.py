@@ -1,1 +1,1 @@
-from NHXDB.NHXDB import db
+from NHXDB.NHXDB import database, table
