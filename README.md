@@ -48,7 +48,7 @@ NHXDB syntax is made as closer as possible to the syntax of Python. Moreover, th
 
 The main database object is called by the following syntax:
 ```sh
-database = NHXDB.db(<verbose=False>)
+database = NHXDB.database(<verbose=False>)
 ```
 If verbose functionality is required, use 1 or True as argument to enable verbosity (or otherwise verbose=True). This allows to return, instead of status code, an exception on screen (when occured).
 All the functions are then called on the ```database``` variable.
@@ -67,16 +67,18 @@ To backup a database. Requires a ```path``` argument of full path to where the b
 #### .restore(properties)
 To restore a database back from backup file. For additional security and preventing anyone from restoring a backup, a ```properties``` argument is given, which is a dictionary, with all same keys as that of ```login``` and requires additional key in the dictionary, named ```file``` which is the full path ___including___ the file name of the backup. Returns a status code.
 For example: ```"C:\path\to\file.NHX"```
-#### .create_table(structure)
-To create a table. This requires a ```structure``` argument, which itself is a list. In it is a ```name``` key, which is the name of the table, and another key named ```fields```, which is a __list__ of dictionaries. These dictionaries represent how many field would be there in the table. Each dictionary require at least __2 keys__, ```name``` and ```type```. The "name" being the name of the field, and "type" being any of the type of field from following: ```int, float, bool and str```. Returns a status code.
+#### table(table_name)
+For manipulation of table, you must initialize a table object with name of the table: ```table = NHXDB.table("users")```. All below functions rely on table(table_name) object.
+#### .create(structure)
+To create a table. This requires a ```structure``` argument. Structure is a __list__ of dictionaries for the structure of table fields. These dictionaries represent how many field would be there in the table. Each dictionary require at least __2 keys__, ```name``` and ```type```. The "name" being the name of the field, and "type" being any of the type of field from following: ```int, float, bool and str```. Returns a status code.
 ##### For example:
 ####
 ```sh
-database = NHXDB.db()
+database = NHXDB.database()
 database.login(your_credentials_here)
-database.create_table({
-    "name": "Students", 
-    "fields": [{
+table = NHXDB.table("users")
+table.create(
+    [{
         "name": "UserID",
         "type": "int",
         "length": 11,
@@ -88,7 +90,7 @@ database.create_table({
         "name": Password,
         "type": "str"
     }]
-})
+)
 ```
 The ```name``` and ```type``` decleration is mandatory, the rest are as follows:
 
@@ -101,55 +103,53 @@ The ```name``` and ```type``` decleration is mandatory, the rest are as follows:
 | attribute | The default attribute (primary, unique or index) | None
 
  Primary vs Unique vs Index will be differentiated later here.
-#### .alter_table(properties)
-This is used to make any kind of modifications in the structure of Table. ```Properties``` is a dictionary with keys, ```table_name```, the name of the table, ```operation```, one of operation from: "add" or "drop" field(s), and ```fields```, a __list__. For __"add"__ operation, the list contains dictionaries of fields to be added, whereas in __"drop"__ operation, the list only contains the field names to drop. Returns a status code.
+#### .alter(properties)
+This is used to make any kind of modifications in the structure of Table. ```Properties``` is a dictionary with keys, ```operation```, one of operation from: "add" or "drop" field(s), and ```fields```, a __list__. For __"add"__ operation, the list contains dictionaries of fields to be added, whereas in __"drop"__ operation, the list only contains the field names to drop. Returns a status code.
 ##### For Example: 
 ###
 ```sh
-# To add a field(s) to the table "Usernames"
-database.alter_table({
-    "table_name": "usernames",
+# To add a field(s) to the table "users"
+table.alter({
     "operation": "add",
     fields = [{
         "name": "on_spotify",
         "type": "bool"
     }]
 })
-# To drop/delete a field(s) from the table "Usernames"
-database.alter_table({
-    "table_name": "usernames",
+# To drop/delete a field(s) from the table "users"
+table.alter({
     "operation": "drop",
     fields = ["on_spotify", "userid"]
 })
 ```
 > Notice, NHXDB is case insensitive so Username = username, better is to write all lower case letters.
-#### .drop_table(table_name)
+#### .drop()
 Drops/Deletes a table. Takes ```table_name``` as an argument, which is string, the name of the table to delete.
-#### .truncate_table(table_name)
+#### .truncate(table_name)
 Same as drop table but just deletes the data inside the table, not the structure itself. Returns a status code.
-#### .insert_data(table_name, data)
-Inserts a data in the ```table_name``` specified. Takes a dictionary ```data``` as an argument, with ```field name``` as key(s) itself and it's value being the value to add. Returns a status code.
+#### .insert(data)
+Inserts a data in the table the function is called on. Takes a dictionary ```data``` as an argument, with ```field name``` as key(s) itself and it's value being the value to add. Returns a status code.
 ##### For Example:
 ###
 ```sh
 # To insert 12 in UserId and "secret_password" in Password
-database.insert_data("usernames", {
+table.insert_data({
     "userid": 12,
     "password": "secret_password"
 })
 ```
-#### .select_data(table_name, criteria)
+#### .select(criteria)
 To select specific data in the table meeting the ```criteria```. Criteria and table_name being __str__, ```criteria``` follows Python's rule of matching criteria. To return every record, use '*' only in criteria. Returns a list of each record containing of dictionaries with ```field name``` as the key and the data as their values.
 ##### For Example:
 ###
 ```sh
 # To get every record in the table Usernames
-database.select_data("usernames", "*") # Returns [{example: value} etc]
+table.select("*") # Returns [{example: value} etc]
 # To get records only with "secret_password" as its "Password" field data
-database.select_data("usernames", "password == secret_password") # Returns list with dictionaries only matching the described criteria
+table.select("password == secret_password") # Returns list with dictionaries only matching the described criteria
 ```
-#### .update_data(table_name, properties)
-Updates the existing data in ```table_name``` with properties as a dictionary with key ```criteria```, same as that for ```select_data()```, and key ```fields```, as a dictionary containing ```field name``` as key(s) for the dictionary and their value as the data to be updated. Returns a status code. If field(s) added, and data exists already for the table, the values defaulted for the field(s) is as follows:
+#### .update(properties)
+Updates the existing data in the table with properties as a dictionary with key ```criteria```, same as that for ```select()```, and key ```fields```, as a dictionary containing ```field name``` as key(s) for the dictionary and their value as the data to be updated. Returns a status code. If field(s) added, and data exists already for the table, the values defaulted for the field(s) is as follows:
 
 | Field Type | Default Data |
 |----|----|
@@ -163,7 +163,7 @@ Updates the existing data in ```table_name``` with properties as a dictionary wi
 ###
 ```sh
 # To update every record's UserID and Password having UserID greater than 12
-database.update_data("usernames", 
+table.update({ 
     fields: {
     "UserID": 21,
     "Password": "new_random_password"
@@ -171,8 +171,8 @@ database.update_data("usernames",
     "criteria": "UserID >= 12"
 })
 ```
-#### .delete_data(table_name, criteria)
-Deletes records from ```table_name``` with matching ```criteria```. Returns a status code.
+#### .delete(criteria)
+Deletes records from table with matching ```criteria```. Returns a status code.
 ### Primary vs Unique vs Index
 ##### Starting from Bottom, what does each mean in NHXDB?
 ####
