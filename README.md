@@ -50,7 +50,7 @@ NHXDB syntax is made as closer as possible to the syntax of Python. Moreover, th
 
 The main database object is called by the following syntax:
 ```sh
-db = NHXDB.database(<optional:verbose=False>, <optional:default_directory=None>)
+db = NHXDB.database(<optional:verbose=False>, <optional:directory=None>)
 ```
 If verbose functionality is required, use 1 or True as argument to enable verbosity (or otherwise verbose=True). This allows to return, instead of status code, an exception on screen (when occured). The default_directory, when None, will use the directory specified by NHXDB, or otherwise if specified directory is not found (must be full Path). Else, the provided path is used.
 All administration functions are then called on the ```db``` variable, as well as the db variable is passed to the table() object after logging in for manipulation of data inside tables.

@@ -3,18 +3,19 @@ from ast import literal_eval
 
 class database:
 
-	def __init__(self, verbose=False):
+	def __init__(self, verbose=False, directory=None):
+		self.logged_in = False
+		self.logged_DB = None
+		self.defaultwd = None
+		self.verbose = verbose
 		try:
-			self.logged_in = False
-			self.logged_DB = None
-			if verbose == True:
-				self.verbose = True
+			if directory == None or os.path.exists(directory) == False:
+				if sys.platform.lower().startswith("win32"): 
+					defaultwd = "C:/Users/" + os.getlogin() + "/AppData/Local/"
+				else:
+					defaultwd = "/usr/local/share/"
 			else:
-				self.verbose = False
-			if sys.platform.lower().startswith("linux") or sys.platform.lower().startswith("darwin"):
-				defaultwd = "/usr/local/share/"
-			elif sys.platform.lower().startswith("win32"): 
-				defaultwd = "C:/Users/" + os.getlogin() + "/AppData/Local/"
+				defaultwd = directory
 			if os.path.exists(defaultwd + "NHX") != True:
 				os.mkdir(defaultwd + "NHX")
 				os.mkdir(defaultwd + "NHX/NHXDB-Data")
