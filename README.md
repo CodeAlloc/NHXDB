@@ -1,7 +1,7 @@
 # NHXDB
 
 NHXDB is a lightweight Database which combines the SQL language with the ease of ORM syntax
-# Update v1.2.3
+# Update v1.3.0
 - ##### Performance Improvements and bug fixes
 # Features currently supported
 
