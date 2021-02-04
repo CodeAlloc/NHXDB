@@ -39,6 +39,8 @@ class database:
 
 
 	def returner(self, code):
+		if type(code) != int:
+			return code
 		if self.verbose == False:
 			return code
 		else:
@@ -228,38 +230,46 @@ class database:
 			return self.returner(303)
 
 
-class table(database):
+class table:
 
 
-	def __init__(self, table_name):
-		super().__init__()
+	def __init__(self, db, table_name):
+		self.defaultwd = db.defaultwd
+		self.logged_DB = db.logged_DB
+		self.initialized = db.initialized
+		self.logged_in = db.logged_in
+		self.database_name = db.database_name
+		self.returner = db.returner
 		if type(table_name) != str:
-			return self.returner(300)
-		if self.initialized != True:
-			return 100
-		if self.logged_in != True:
-			return self.returner(304)
+			self.ntable = True
+			return
+		self.ntable = False
 		if os.path.exists(self.defaultwd + self.logged_DB + "/tables/" + table_name.lower()) == False:
 			self.__tablexists = False
+			self.fields = []
+			self.indexdata = []
 		else:
 			self.__tablexists = True
-		fields = []
-		with open(self.defaultwd + self.logged_DB + "/tables/" + table_name.lower() + "/config.NHX", "r+", newline='') as file:
-			reader = csv.reader(file, delimiter="|")
-			for index, row in enumerate(reader):
-				if index == 0:
-					self.fields = row
-					break
-		for field in fields:
-			field = literal_eval(field)
-			if field["attribute"] != None:
-				indexread.append(field["name"].lower())
-		indexlines = []
-		with open(self.defaultwd + self.logged_DB + "/tables/" + table_name.lower() + "/index.NHX", "r+", newline="") as file:
-			reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
-			for row in reader:
-				indexlines.append(row)
-		self.indexdata = indexlines
+			with open(self.defaultwd + self.logged_DB + "/tables/" + table_name.lower() + "/config.NHX", "r+", newline='') as file:
+				reader = csv.reader(file, delimiter="|")
+				for index, row in enumerate(reader):
+					if index == 0:
+						self.fields = row
+						break
+			cfields = []
+			for field in self.fields:
+				cfields.append(literal_eval(field))
+			self.fields = cfields
+			indexread = []
+			for field in self.fields:
+				if field["attribute"] != None:
+					indexread.append(field["name"].lower())
+			indexlines = []
+			with open(self.defaultwd + self.logged_DB + "/tables/" + table_name.lower() + "/index.NHX", "r+", newline="") as file:
+				reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
+				for row in reader:
+					indexlines.append(row)
+			self.indexdata = indexlines
 		self.table_name = table_name
 
 
@@ -310,6 +320,8 @@ class table(database):
 		if self.initialized != True:
 			# Returns status code 100 = Database System not Initialized Yet
 			return 100
+		if self.ntable == True:
+			return self.returner(300)
 		if self.logged_in != True:
 			return self.returner(304)
 		if type(structure) != list:
@@ -320,7 +332,7 @@ class table(database):
 		if os.path.exists(self.defaultwd + self.database_name + "/tables/" + self.table_name) and os.path.isfile(self.defaultwd + self.database_name + "/tables/" + self.table_name + "/config.NHX"):
 			return self.returner(301)
 		if os.path.exists(self.defaultwd + self.database_name + "/tables/" + self.table_name) == False:
-			os.mkdir(self.table_name)
+			os.mkdir(self.defaultwd + self.database_name + "/tables/" + self.table_name)
 		status_code = self.__valitable(structure)
 		if status_code != 200:
 			return self.returner(status_code)
@@ -366,16 +378,18 @@ class table(database):
 		with open(self.defaultwd + self.database_name + "/tables/" + self.table_name + "/config.NHX", "w+", newline='') as file:
 			writer = csv.writer(file, delimiter="|")
 			writer.writerow(to_write)
+			self.fields = to_write
 		if (os.path.isfile(self.defaultwd + self.database_name + "/tables/" + self.table_name + "/nindex.NHX") == True or os.path.isfile(self.defaultwd + self.database_name + "/tables/" + self.table_name + "/index.NHX")) and override == False:
 			# Returns status code 500 = Data file for the current table exists
 			return self.returner(500)
 		with open(self.defaultwd + self.database_name + "/tables/" + self.table_name + "/index.NHX", "w+", newline='') as file:
-			pass
+			self.indexdata = []
 		if os.path.isfile(self.defaultwd + self.database_name + "/tables/" + self.table_name + "/nindex.NHX") == True and override == False:
 			# Returns status code 500 = Data file for the current table exists
 			return self.returner(500)
 		with open(self.defaultwd + self.database_name + "/tables/" + self.table_name + "/nindex.NHX", "w+", newline='') as file:
 			pass
+		self.__tablexists = True
 		return self.returner(200)
 
 
@@ -385,6 +399,8 @@ class table(database):
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
+		if self.ntable == True:
+			return self.returner(300)
 		if self.__tablexists == False:
 			return self.returner(404)
 		shutil.rmtree(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower())
@@ -400,6 +416,8 @@ class table(database):
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
+		if self.ntable == True:
+			return self.returner(300)
 		if self.__tablexists == False:
 			return self.returner(404)
 		head = []
@@ -417,6 +435,8 @@ class table(database):
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
+		if self.ntable == True:
+			return self.returner(300)
 		if "fields" not in values or "operation" not in values:
 			return self.returner(302)
 		if type(values) != dict or type(values["operation"]) != str or type(values["fields"]) != list:
@@ -543,6 +563,8 @@ class table(database):
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
+		if self.ntable == True:
+			return self.returner(300)
 		if type(values) != dict:
 			return self.returner(300)
 		field_names_nindex = []
@@ -552,7 +574,6 @@ class table(database):
 		nindexread = []
 		indexread = []
 		for field in self.fields:
-			field = literal_eval(field)
 			if field["attribute"] != None:
 				indexread.append(field["name"].lower())
 			else:
@@ -560,7 +581,6 @@ class table(database):
 		indexvalues = {}
 		nindexvalues = {}
 		for field in self.fields:
-			field = literal_eval(field)
 			if field["ai"] != True:
 				if ((field["name"].lower() not in values and field["null"] != True) or (values[field["name"].lower()] == "")) and (field["ai"] == False and field["default"] == None):
 					# Returns status code 600 = Values for a non Null field is not specified
@@ -633,42 +653,40 @@ class table(database):
 		return self.returner(200)
 
 
-	def update(self, values):
+	def update(self, criteria, fields):
 		if self.initialized != True:
 			# Returns status code 100 = Database System not Initialized Yet
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
-		if type(values) != dict:
+		if self.ntable == True:
 			return self.returner(300)
-		if "fields" not in values or "criteria" not in values:
-			return self.returner(302)
+		if type(fields) != dict:
+			return self.returner(300)
 		if self.__tablexists == False:
 			return self.returner(404)
 		nindexread = []
 		indexread = []
 		to_alter = []
-		for field_name in values["fields"]:
+		for field_name in fields:
 			to_alter.append(field_name)
 		for field in self.fields:
-			field = literal_eval(field)
 			if field["attribute"] != None:
 				indexread.append(field["name"].lower())
 			else:
 				nindexread.append(field["name"].lower())
 		flagged = True
-		if values["criteria"] == "*":
+		if criteria == "*":
 			for field in self.fields:
-				field = literal_eval(field)
 				if field["name"] in to_alter:
 					if self.pop != True:
 						if field["attribute"] == "primary" or field["attribute"] == "unique":
 							return self.returner(603)
-						if (field["null"] == False) and (values["fields"][field["name"]] == "" or values["fields"][field["name"]] == None) and (field["ai"] == False and field["default"] == None):
+						if (field["null"] == False) and ([field["name"]] == "" or fields[field["name"]] == None) and (field["ai"] == False and field["default"] == None):
 							return self.returner(600)
-						if len(str(values["fields"][field["name"]])) > field["length"]:
+						if len(str(fields[field["name"]])) > field["length"]:
 							return self.returner(602)
-						if (field["type"].lower() == "int" and type(values["fields"][field["name"]]) != int) or (field["type"] == "float" and type(values["fields"][field["name"]]) != float) or (field["type"] == "str" and type(values["fields"][field["name"]]) != str) or ((field["type"] == "bool" and type(values["fields"][field["name"]]) != bool)):
+						if (field["type"].lower() == "int" and type(fields[field["name"]]) != int) or (field["type"] == "float" and type(fields[field["name"]]) != float) or (field["type"] == "str" and type(fields[field["name"]]) != str) or ((field["type"] == "bool" and type(fields[field["name"]]) != bool)):
 							return self.returner(601)
 					flagged = False
 					to_up = []
@@ -676,11 +694,11 @@ class table(database):
 						with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "r+", newline='') as file:
 							reader = csv.DictReader(file, fieldnames=indexread, delimiter="|")
 							for index, row in enumerate(reader):
-								if self.pop and field["name"] in values["fields"]:
+								if self.pop and field["name"] in fields:
 									row.pop(field["name"])
 									to_up.append(row)
 								else:
-									row.update({field["name"] : values["fields"][field["name"]]})
+									row.update({field["name"] : fields[field["name"]]})
 									to_up.append(row)
 						with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "w+", newline='') as file:
 							if self.pop:
@@ -692,11 +710,11 @@ class table(database):
 						with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "r+", newline='') as file:
 							reader = csv.DictReader(file, fieldnames=nindexread, delimiter="|")
 							for index, row in enumerate(reader):
-								if self.pop and field["name"] in values["fields"]:
+								if self.pop and field["name"] in fields:
 									row.pop(field["name"])
 									to_up.append(row)
 								else:
-									row.update({field["name"] : values["fields"][field["name"]]})
+									row.update({field["name"] : fields[field["name"]]})
 									to_up.append(row)
 						with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "w+", newline='') as file:
 							if self.pop:
@@ -704,7 +722,7 @@ class table(database):
 							writer = csv.DictWriter(file, fieldnames=nindexread, delimiter="|")
 							for index, row in enumerate(to_up):
 								writer.writerow(row)
-		elif "criteria" in values and type(values["criteria"]) == str and values["criteria"] != "*":
+		elif type(criteria) == str and criteria != "*":
 			flagged = False
 			splitted = []
 			typ = 0
@@ -712,18 +730,18 @@ class table(database):
 			left = 2
 			right = 3
 			operands = []
-			if "==" in values["criteria"]:
-				splitted = ["all", "=="] + values["criteria"].split("==")
-			elif "!=" in values["criteria"]:
-				splitted = ["all", "!="] + values["criteria"].split("!=")
-			elif ">=" in values["criteria"]:
-				splitted = ["if", ">="] + values["criteria"].split(">=")
-			elif "<=" in values["criteria"]:
-				splitted = ["if", "<="] + values["criteria"].split("<=")
-			elif "<" in values["criteria"]:
-				splitted = ["if", "<"] + values["criteria"].split("<")
-			elif ">" in values["criteria"]:
-				splitted = ["if", ">"] + values["criteria"].split(">")
+			if "==" in criteria:
+				splitted = ["all", "=="] + criteria.split("==")
+			elif "!=" in criteria:
+				splitted = ["all", "!="] + criteria.split("!=")
+			elif ">=" in criteria:
+				splitted = ["if", ">="] + criteria.split(">=")
+			elif "<=" in criteria:
+				splitted = ["if", "<="] + criteria.split("<=")
+			elif "<" in criteria:
+				splitted = ["if", "<"] + criteria.split("<")
+			elif ">" in criteria:
+				splitted = ["if", ">"] + criteria.split(">")
 			else:
 				# Returns status code 605 = Cannot find a valid criteria
 				return self.returner(605)
@@ -743,7 +761,6 @@ class table(database):
 			results = False
 			crit = {}
 			for fieldaa in self.fields:
-				fieldaa = literal_eval(fieldaa)
 				if fieldaa["name"] == operands[left]:
 					results = True
 					if (fieldaa["type"] == "str" or fieldaa["type"] == "bool") and operands[typ] == "if":
@@ -861,19 +878,18 @@ class table(database):
 								line_no = False
 				if line_no == False:
 					return self.returner(700)
-			for field in values["fields"]:
+			for field in fields:
 				nindexlines = []
 				indexlines = []
 				for fieldx in self.fields:
-					fieldx = literal_eval(fieldx)
 					if field == fieldx["name"]:
-						if (fieldx["attribute"] != None and(fieldx["attribute"] == "primary" or fieldx["attribute"] == "index")) and (values["fields"][field] == "" or values["fields"][field] == None):
+						if (fieldx["attribute"] != None and(fieldx["attribute"] == "primary" or fieldx["attribute"] == "index")) and (fields[field] == "" or fields[field] == None):
 							return self.returner(604)
-						if (fieldx["null"] == False) and (values["fields"][field] == "" or values["fields"][field] == None) and (fieldx["ai"] == False and fieldx["default"] == None):
+						if (fieldx["null"] == False) and (fields[field] == "" or fields[field] == None) and (fieldx["ai"] == False and fieldx["default"] == None):
 							return self.returner(600)
-						if len(str(values["fields"][field])) > fieldx["length"]:
+						if len(str(fields[field])) > fieldx["length"]:
 							return self.returner(602)
-						if (fieldx["type"].lower() == "int" and type(values["fields"][field]) != int) or (fieldx["type"] == "float" and type(values["fields"][field]) != float) or (fieldx["type"] == "str" and type(values["fields"][field]) != str) or ((fieldx["type"] == "bool" and type(values["fields"][field]) != bool)):
+						if (fieldx["type"].lower() == "int" and type(fields[field]) != int) or (fieldx["type"] == "float" and type(fields[field]) != float) or (fieldx["type"] == "str" and type(fields[field]) != str) or ((fieldx["type"] == "bool" and type(fields[field]) != bool)):
 							return self.returner(601)
 						flag = False
 						if fieldx["attribute"] == "unique" or fieldx["attribute"] == "primary":
@@ -881,7 +897,7 @@ class table(database):
 							reader = csv.DictReader(file, delimiter="|", fieldnames=indexread)
 							flagged = False
 							for row in reader:
-								if str(values["fields"][fieldx["name"].lower()]) == str(row[fieldx["name"]]):
+								if str(fields[fieldx["name"].lower()]) == str(row[fieldx["name"]]):
 									flag = True
 									break
 							if flag:
@@ -893,19 +909,19 @@ class table(database):
 						for row in reader:
 							indexlines.append(row)
 					for line in line_no:
-						indexlines[line].update({field: values["fields"][field]})
+						indexlines[line].update({field: fields[field]})
 					with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/index.NHX", "w+", newline='') as file:
 						writer = csv.DictWriter(file, delimiter="|", fieldnames=indexread)
 						for line in indexlines:
 							writer.writerow(line)
-				self.indexdata = indexlines
+					self.indexdata = indexlines
 				if field in nindexread:
 					with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "r+", newline="") as file:
 						reader = csv.DictReader(file, delimiter="|", fieldnames=nindexread)
 						for row in reader:
 							nindexlines.append(row)
 					for line in line_no:
-						nindexlines[line].update({field: values["fields"][field]})
+						nindexlines[line].update({field: fields[field]})
 					with open(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower() + "/nindex.NHX", "w+", newline='') as file:
 						writer = csv.DictWriter(file, delimiter="|", fieldnames=nindexread)
 						for line in nindexlines:
@@ -921,6 +937,8 @@ class table(database):
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
+		if self.ntable == True:
+			return self.returner(300)
 		if type(criteria) != str:
 			return self.returner(300)
 		if os.path.exists(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower()) == False:
@@ -928,7 +946,6 @@ class table(database):
 		nindexread = []
 		indexread = []
 		for field in self.fields:
-			field = literal_eval(field)
 			if field["attribute"] != None:
 				indexread.append(field["name"])
 			else:
@@ -967,7 +984,6 @@ class table(database):
 		crit = {}
 		results = False
 		for fieldaa in self.fields:
-			fieldaa = literal_eval(fieldaa)
 			if fieldaa["name"] == operands[left].lower():
 				results = True
 				if (fieldaa["type"] == "str" or fieldaa["type"] == "bool") and operands[typ] == "if":
@@ -1116,6 +1132,8 @@ class table(database):
 			return 100
 		if self.logged_in != True:
 			return self.returner(304)
+		if self.ntable == True:
+			return self.returner(300)
 		if type(criteria) != str:
 			return self.returner(300)
 		if os.path.exists(self.defaultwd + self.logged_DB + "/tables/" + self.table_name.lower()) == False:
@@ -1123,7 +1141,6 @@ class table(database):
 		nindexread = []
 		indexread = []
 		for field in self.fields:
-			field = literal_eval(field)
 			if field["attribute"] != None:
 				indexread.append(field["name"].lower())
 			else:
@@ -1144,7 +1161,7 @@ class table(database):
 				indexlines[0]
 			except IndexError:
 				return self.returner(nindexlines)
-			for row in indexlines:
+			for index, row in enumerate(indexlines):
 				row.update(nindexlines[index])
 				tout.append(row)
 			return self.returner(tout)
@@ -1183,7 +1200,6 @@ class table(database):
 			crit = {}
 			results = False
 			for fieldaa in self.fields:
-				fieldaa = literal_eval(fieldaa)
 				if fieldaa["name"] == operands[left].lower():
 					results = True
 					if (fieldaa["type"] == "str" or fieldaa["type"] == "bool") and operands[typ] == "if":
