@@ -1,7 +1,8 @@
 # NHXDB
 
 NHXDB is a lightweight Database which combines the SQL language with the ease of ORM syntax
-# Update v1.3.0
+# Update v1.3.1
+- ##### Restructure of syntax and refinement of algorithms
 - ##### Performance Improvements and bug fixes
 # Features currently supported
 
@@ -48,10 +49,10 @@ NHXDB syntax is made as closer as possible to the syntax of Python. Moreover, th
 
 The main database object is called by the following syntax:
 ```sh
-database = NHXDB.database(<verbose=False>)
+db = NHXDB.database(<verbose=False>)
 ```
 If verbose functionality is required, use 1 or True as argument to enable verbosity (or otherwise verbose=True). This allows to return, instead of status code, an exception on screen (when occured).
-All the functions are then called on the ```database``` variable.
+All administration functions are then called on the ```db``` variable, as well as the db variable is passed to the table() object after logging in for manipulation of data inside tables.
 #### .isPermitted()
 Checks whether the permissions to read/write is granted in the desired folder. Returns 200 if granted, 101 if denied.
 #### .create(properties)
@@ -67,16 +68,16 @@ To backup a database. Requires a ```path``` argument of full path to where the b
 #### .restore(properties)
 To restore a database back from backup file. For additional security and preventing anyone from restoring a backup, a ```properties``` argument is given, which is a dictionary, with all same keys as that of ```login``` and requires additional key in the dictionary, named ```file``` which is the full path ___including___ the file name of the backup. Returns a status code.
 For example: ```"C:\path\to\file.NHX"```
-#### table(table_name)
-For manipulation of table, you must initialize a table object with name of the table: ```table = NHXDB.table("users")```. All below functions rely on table(table_name) object.
+#### table(db_object, table_name)
+For manipulation of table, you must initialize a table object with name of the table. The table object requires another ```db_object``` initialized previously: ```table = NHXDB.table(db,"users")```. All below functions rely on table(table_name) object.
 #### .create(structure)
 To create a table. This requires a ```structure``` argument. Structure is a __list__ of dictionaries for the structure of table fields. These dictionaries represent how many field would be there in the table. Each dictionary require at least __2 keys__, ```name``` and ```type```. The "name" being the name of the field, and "type" being any of the type of field from following: ```int, float, bool and str```. Returns a status code.
 ##### For example:
 ####
 ```sh
-database = NHXDB.database()
-database.login(your_credentials_here)
-table = NHXDB.table("users")
+db = NHXDB.database()
+db.login(your_credentials_here)
+table = NHXDB.table(db, "users")
 table.create(
     [{
         "name": "UserID",
@@ -104,7 +105,7 @@ The ```name``` and ```type``` decleration is mandatory, the rest are as follows:
 
  Primary vs Unique vs Index will be differentiated later here.
 #### .alter(properties)
-This is used to make any kind of modifications in the structure of Table. ```Properties``` is a dictionary with keys, ```operation```, one of operation from: "add" or "drop" field(s), and ```fields```, a __list__. For __"add"__ operation, the list contains dictionaries of fields to be added, whereas in __"drop"__ operation, the list only contains the field names to drop. Returns a status code.
+This is used to make any kind of modifications in the structure of Table. ```Properties``` is a dictionary with keys, ```operation```, one of operation from: "add" or "drop" field(s), and ```fields```, a __list__. For __"add"__ operation, the list contains dictionaries of fields to be added, whereas in __"drop"__ operation, the list only contains the field names to drop. Returns a status code. 
 ##### For Example: 
 ###
 ```sh
@@ -123,9 +124,19 @@ table.alter({
 })
 ```
 > Notice, NHXDB is case insensitive so Username = username, better is to write all lower case letters.
+
+If field(s) is added, and data exists already for the table, the values defaulted for the field(s) is as follows:
+
+| Field Type | Default Data |
+|----|----|
+|int|0
+|str|" " (Empty String)
+|float| 0.00
+|bool| False
+
 #### .drop()
 Drops/Deletes a table. Takes ```table_name``` as an argument, which is string, the name of the table to delete.
-#### .truncate(table_name)
+#### .truncate()
 Same as drop table but just deletes the data inside the table, not the structure itself. Returns a status code.
 #### .insert(data)
 Inserts a data in the table the function is called on. Takes a dictionary ```data``` as an argument, with ```field name``` as key(s) itself and it's value being the value to add. Returns a status code.
@@ -148,27 +159,16 @@ table.select("*") # Returns [{example: value} etc]
 # To get records only with "secret_password" as its "Password" field data
 table.select("password == secret_password") # Returns list with dictionaries only matching the described criteria
 ```
-#### .update(properties)
-Updates the existing data in the table with properties as a dictionary with key ```criteria```, same as that for ```select()```, and key ```fields```, as a dictionary containing ```field name``` as key(s) for the dictionary and their value as the data to be updated. Returns a status code. If field(s) added, and data exists already for the table, the values defaulted for the field(s) is as follows:
-
-| Field Type | Default Data |
-|----|----|
-|int|0
-|str|" " (Empty String)
-|float| 0.00
-|bool| False
-
+#### .update(criteria, fields)
+Updates the existing data in the table with```criteria``` of updating, and ```fields``` as a dictionary with field names as keys to be updated with new data. Returns a status code. 
 
 ##### For Example:
 ###
 ```sh
-# To update every record's UserID and Password having UserID greater than 12
-table.update({ 
-    fields: {
+# To update every record's UserID and Password having UserID = 6
+table.update("userid == 6"{ 
     "UserID": 21,
     "Password": "new_random_password"
-    },
-    "criteria": "UserID >= 12"
 })
 ```
 #### .delete(criteria)
